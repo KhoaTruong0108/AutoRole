@@ -1,0 +1,36 @@
+{
+	"job_id": "3847291",
+	"fields": [
+		{
+			"id": "email",
+			"label": "Email",
+			"type": "text",
+			"required": true,
+			"value": ""
+		},
+		{
+			"id": "country",
+			"label": "Country",
+			"type": "single_choice",
+			"required": true,
+			"options": ["United States", "Canada", "Vietnam"],
+			"value": ""
+		},
+		{
+			"id": "work_authorisation",
+			"label": "Work Authorisation",
+			"type": "multiple_choice",
+			"required": true,
+			"options": ["US Citizen", "Green Card", "Requires Sponsorship"],
+			"value": []
+		},
+		{
+			"id": "resume_upload",
+			"label": "Resume",
+			"type": "file_upload",
+			"required": true,
+			"accepted": [".pdf"],
+			"value": ""
+		}
+	]
+}
