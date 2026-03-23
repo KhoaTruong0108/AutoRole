@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import aiosqlite
 import orjson
@@ -166,3 +167,39 @@ class JobRepository:
 		) as cursor:
 			rows = await cursor.fetchall()
 		return [row[0] for row in rows if row[0]]
+
+	async def upsert_checkpoint(self, run_id: str, last_success_stage: str, context: dict[str, Any]) -> None:
+		await self._db.execute(
+			"""
+			INSERT INTO pipeline_checkpoints (run_id, last_success_stage, context_json, updated_at)
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT(run_id) DO UPDATE SET
+				last_success_stage = excluded.last_success_stage,
+				context_json = excluded.context_json,
+				updated_at = excluded.updated_at
+			""",
+			(
+				run_id,
+				last_success_stage,
+				orjson.dumps(context).decode("utf-8"),
+				datetime.now(timezone.utc).isoformat(),
+			),
+		)
+		await self._db.commit()
+
+	async def get_checkpoint(self, run_id: str) -> tuple[str, dict[str, Any]] | None:
+		async with self._db.execute(
+			"""
+			SELECT last_success_stage, context_json
+			FROM pipeline_checkpoints
+			WHERE run_id = ?
+			""",
+			(run_id,),
+		) as cursor:
+			row = await cursor.fetchone()
+		if row is None:
+			return None
+
+		stage = str(row[0])
+		context = orjson.loads(row[1])
+		return stage, context

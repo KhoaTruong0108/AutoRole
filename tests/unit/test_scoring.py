@@ -4,9 +4,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from autorole.config import SearchFilter
 from autorole.config import ScoringWeights
 from autorole.context import JobApplicationContext, ScoreReport, TailoredResume
 from autorole.integrations.llm import LLMResponseError
+from autorole.integrations.scrapers import register_scraper
+from autorole.integrations.scrapers.base import ATSScraper
+from autorole.integrations.scrapers.models import ApplicationForm, JobDescription, JobMetadata
 from autorole.stages.scoring import (
 	CriterionDetail,
 	CriterionScores,
@@ -58,6 +62,34 @@ class MockLLMClient:
 class ErrorLLMClient:
 	async def call(self, **_kwargs: Any) -> Any:
 		raise LLMResponseError("bad llm response")
+
+
+class StubATSScraper(ATSScraper):
+	async def search_jobs(self, filters: SearchFilter) -> list[JobMetadata]:
+		_ = filters
+		return []
+
+	async def fetch_job_description(self, job_url: str) -> JobDescription:
+		return JobDescription(
+			job_id="stub",
+			job_title="Stub Title",
+			company_name="Stub Co",
+			raw_html=f"<div>ATS:{job_url}</div>",
+			plain_text="ATS",
+			qualifications=[],
+			responsibilities=[],
+			preferred_skills=[],
+			culture_signals=[],
+		)
+
+	async def fetch_application_form(self, apply_url: str) -> ApplicationForm:
+		return ApplicationForm(
+			job_id="stub",
+			apply_url=apply_url,
+			fields=[],
+			submit_selector="button[type='submit']",
+			form_selector="form",
+		)
 
 
 def _criterion_scores(technical: float = 0.8) -> CriterionScores:
@@ -232,3 +264,22 @@ async def test_scoring_fails_on_llm_error(test_config: Any) -> None:
 
 	assert not result.success
 	assert result.error_type == "LLMResponseError"
+
+
+async def test_scoring_uses_registered_ats_scraper_for_jd_fetch(test_config: Any) -> None:
+	register_scraper("smartrecruiters", StubATSScraper)
+	listing = SAMPLE_LISTING.model_copy(
+		update={"job_url": "https://www.smartrecruiters.com/company/jobs/123"}
+	)
+	page = MockPage("<html><body>SHOULD_NOT_BE_USED</body></html>")
+	llm = MockLLMClient(_jd_breakdown(), _criterion_scores())
+	stage = ScoringStage(test_config, llm, page)
+
+	ctx = JobApplicationContext(run_id="acme_123", listing=listing)
+	result = await stage.execute(Message(run_id=ctx.run_id, payload=ctx.model_dump()))
+
+	assert result.success
+	assert page.navigation_count == 0
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.score is not None
+	assert "ATS:https://www.smartrecruiters.com/company/jobs/123" in out_ctx.score.jd_html

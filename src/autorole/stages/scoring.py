@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from autorole.config import AppConfig, ScoringWeights
 from autorole.context import JobApplicationContext, ScoreReport
 from autorole.integrations.llm import LLMClient, LLMResponseError
+from autorole.integrations.scrapers import get_scraper
 
 try:
 	from pipeline.interfaces import Stage
@@ -176,6 +177,11 @@ class ScoringStage(Stage):
 
 
 async def _fetch_jd_html(page: Any, url: str) -> str:
+	scraper = get_scraper(url, page=page)
+	jd = await scraper.fetch_job_description(url)
+	if jd.raw_html:
+		return jd.raw_html
+	# Safety fallback if a scraper returns empty HTML unexpectedly.
 	await page.goto(url, wait_until="networkidle", timeout=30_000)
 	return await page.content()
 

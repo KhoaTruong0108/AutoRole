@@ -47,7 +47,7 @@ class LLMConfig(BaseModel):
 
 
 class RendererConfig(BaseModel):
-	engine: Literal["pandoc", "weasyprint"] = "pandoc"
+	engine: Literal["pandoc", "weasyprint"] = "weasyprint"
 	pandoc_path: str = "pandoc"
 	template: str = ""
 

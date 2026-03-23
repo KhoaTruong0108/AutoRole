@@ -53,6 +53,7 @@ class FormSubmissionStage(Stage):
 	async def execute(self, message: Message) -> StageResult:
 		_ = self._config
 		ctx = JobApplicationContext.model_validate(message.payload)
+		dryrun_stop_after_submit = bool(getattr(message, "metadata", {}).get("dryrun_stop_after_submit", False))
 		if ctx.form_intelligence is None or ctx.packaged is None:
 			return StageResult.fail(
 				"FormSubmissionStage: form_intelligence and packaged must be set",
@@ -61,9 +62,23 @@ class FormSubmissionStage(Stage):
 
 		try:
 			await _fill_form(self._page, ctx.form_intelligence.form_json_filled)
-			await _attach_resume(self._page, ctx.packaged.pdf_path)
-			await _submit_form(self._page)
-			confirmed = await _confirm_submission(self._page)
+			try:
+				await _attach_resume(self._page, ctx.packaged.pdf_path)
+			except Exception:
+				if not dryrun_stop_after_submit:
+					raise
+			confirmed = False
+			submission_status = "submitted_dryrun" if dryrun_stop_after_submit else "submitted"
+			try:
+				await _submit_form(self._page)
+			except Exception:
+				if not dryrun_stop_after_submit:
+					raise
+				submission_status = "submitted_dryrun_submit_failed"
+
+			if not dryrun_stop_after_submit:
+				confirmed = await _confirm_submission(self._page)
+				submission_status = "submitted" if confirmed else "unconfirmed"
 		except Exception as exc:
 			return StageResult.fail(f"Submission failed: {exc}", type(exc).__name__)
 
@@ -71,7 +86,7 @@ class FormSubmissionStage(Stage):
 			resume_id=ctx.packaged.resume_id,
 			questionnaire=ctx.form_intelligence.questionnaire,
 			form_json=ctx.form_intelligence.form_json_filled,
-			submission_status="submitted" if confirmed else "unconfirmed",
+			submission_status=submission_status,
 			submission_confirmed=confirmed,
 			applied_at=datetime.now(timezone.utc),
 		)

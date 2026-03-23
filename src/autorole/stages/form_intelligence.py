@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 from autorole.config import AppConfig
 from autorole.context import FormIntelligenceResult, JobApplicationContext
 from autorole.integrations.llm import LLMClient
+from autorole.integrations.scrapers import get_scraper
+from autorole.integrations.scrapers.models import ApplicationForm
 
 try:
 	from pipeline.interfaces import Stage
@@ -89,32 +91,45 @@ class FormIntelligenceStage(Stage):
 				"PreconditionError",
 			)
 
-		await _apply_session_cookies(self._page, ctx)
+		# Prefer ATS-native form extraction when available, then fall back to generic DOM extraction.
+		form_json_raw: dict[str, Any] | None = None
+		apply_url = ctx.listing.apply_url or ctx.listing.job_url
 		try:
-			await self._page.goto(ctx.listing.job_url, wait_until="networkidle", timeout=30_000)
-		except Exception as exc:
-			return StageResult.fail(f"Navigation failed: {exc}", "NavigationError")
+			scraper = get_scraper(ctx.listing.job_url, page=self._page)
+			application_form = await scraper.fetch_application_form(apply_url)
+			form_json_raw = _application_form_to_form_json(application_form)
+			if not form_json_raw.get("fields"):
+				form_json_raw = None
+		except Exception:
+			form_json_raw = None
 
-		for attempt in range(MAX_CAPTCHA_ATTEMPTS + 1):
-			captcha = await _detect_captcha(self._page)
-			if not captcha:
-				break
-			if self._captcha_solver is None or attempt == MAX_CAPTCHA_ATTEMPTS:
-				return StageResult.fail(
-					(
-						f"CAPTCHA detected at {ctx.listing.job_url} and could not be solved after "
-						f"{attempt} attempt(s). Human intervention required."
-					),
-					"CaptchaChallenge",
-				)
-			solved = await self._captcha_solver.solve(self._page, captcha)
-			if not solved:
-				continue
+		if form_json_raw is None:
+			await _apply_session_cookies(self._page, ctx)
+			try:
+				await self._page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
+			except Exception as exc:
+				return StageResult.fail(f"Navigation failed: {exc}", "NavigationError")
 
-		try:
-			form_json_raw = await _extract_form_fields(self._page)
-		except Exception as exc:
-			return StageResult.fail(f"Form extraction failed: {exc}", "FormExtractionError")
+			for attempt in range(MAX_CAPTCHA_ATTEMPTS + 1):
+				captcha = await _detect_captcha(self._page)
+				if not captcha:
+					break
+				if self._captcha_solver is None or attempt == MAX_CAPTCHA_ATTEMPTS:
+					return StageResult.fail(
+						(
+							f"CAPTCHA detected at {apply_url} and could not be solved after "
+							f"{attempt} attempt(s). Human intervention required."
+						),
+						"CaptchaChallenge",
+					)
+				solved = await self._captcha_solver.solve(self._page, captcha)
+				if not solved:
+					continue
+
+			try:
+				form_json_raw = await _extract_form_fields(self._page)
+			except Exception as exc:
+				return StageResult.fail(f"Form extraction failed: {exc}", "FormExtractionError")
 
 		questionnaire = _build_questionnaire(form_json_raw)
 		user_profile = _load_user_profile(self._config)
@@ -144,6 +159,35 @@ class FormIntelligenceStage(Stage):
 		return StageResult.ok(ctx.model_copy(update={"form_intelligence": result}))
 
 
+def _application_form_to_form_json(application_form: ApplicationForm) -> dict[str, Any]:
+	fields: list[dict[str, Any]] = []
+	for field in application_form.fields:
+		field_type = field.field_type
+		if field_type in {"text", "textarea", "hidden"}:
+			normalized = "text"
+		elif field_type in {"select", "radio"}:
+			normalized = "single_choice"
+		elif field_type == "checkbox":
+			normalized = "multiple_choice"
+		elif field_type == "file":
+			normalized = "file_upload"
+		else:
+			normalized = "text"
+
+		fields.append(
+			{
+				"id": field.name,
+				"label": field.label or field.name,
+				"type": normalized,
+				"required": field.required,
+				"options": list(field.options),
+				"value": [] if normalized == "multiple_choice" else "",
+			}
+		)
+
+	return {"fields": fields}
+
+
 async def _apply_session_cookies(page: Any, ctx: JobApplicationContext) -> None:
 	if ctx.session is None or not ctx.session.authenticated:
 		return
@@ -153,12 +197,12 @@ async def _apply_session_cookies(page: Any, ctx: JobApplicationContext) -> None:
 
 async def _detect_captcha(page: Any) -> str | None:
 	content = (await page.content()).lower()
-	if "recaptcha" in content:
-		return "recaptcha_v2"
-	if "hcaptcha" in content:
-		return "hcaptcha"
-	if "cf-challenge" in content:
-		return "cloudflare"
+	# if "recaptcha" in content:
+	# 	return "recaptcha_v2"
+	# if "hcaptcha" in content:
+	# 	return "hcaptcha"
+	# if "cf-challenge" in content:
+	# 	return "cloudflare"
 	return None
 
 

@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from autorole.config import AppConfig
+from autorole.config import SearchFilter
 from autorole.context import JobListing
+from autorole.integrations.scrapers import register_scraper
+from autorole.integrations.scrapers.base import ATSScraper
+from autorole.integrations.scrapers.models import ApplicationForm, JobDescription, JobMetadata
 from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
 
 try:
@@ -35,6 +39,80 @@ class MockExtractor:
 			raise self._error
 		assert self._listing is not None
 		return self._listing
+
+
+class StubATSSearchScraper(ATSScraper):
+	async def search_jobs(self, filters: SearchFilter) -> list[JobMetadata]:
+		_ = filters
+		return [
+			JobMetadata(
+				job_id="1001",
+				job_title="Platform Engineer",
+				company_name="Robo Corp",
+				job_url="https://www.smartrecruiters.com/company/jobs/1001",
+				apply_url="https://www.smartrecruiters.com/company/jobs/1001/apply",
+			)
+		]
+
+	async def fetch_job_description(self, job_url: str) -> JobDescription:
+		_ = job_url
+		return JobDescription(
+			job_id="",
+			job_title="",
+			company_name="",
+			raw_html="",
+			plain_text="",
+			qualifications=[],
+			responsibilities=[],
+			preferred_skills=[],
+			culture_signals=[],
+		)
+
+	async def fetch_application_form(self, apply_url: str) -> ApplicationForm:
+		return ApplicationForm(
+			job_id="",
+			apply_url=apply_url,
+			fields=[],
+			submit_selector="button[type='submit']",
+			form_selector="form",
+		)
+
+
+class StubLeverSearchNoApplyScraper(ATSScraper):
+	async def search_jobs(self, filters: SearchFilter) -> list[JobMetadata]:
+		_ = filters
+		return [
+			JobMetadata(
+				job_id="2002",
+				job_title="Backend Engineer",
+				company_name="Acme",
+				job_url="https://jobs.lever.co/acme/2002",
+				apply_url="",
+			)
+		]
+
+	async def fetch_job_description(self, job_url: str) -> JobDescription:
+		_ = job_url
+		return JobDescription(
+			job_id="",
+			job_title="",
+			company_name="",
+			raw_html="",
+			plain_text="",
+			qualifications=[],
+			responsibilities=[],
+			preferred_skills=[],
+			culture_signals=[],
+		)
+
+	async def fetch_application_form(self, apply_url: str) -> ApplicationForm:
+		return ApplicationForm(
+			job_id="",
+			apply_url=apply_url,
+			fields=[],
+			submit_selector="button[type='submit']",
+			form_selector="form",
+		)
 
 
 def _listing(company: str, job_id: str) -> JobListing:
@@ -135,4 +213,32 @@ async def test_manual_url_exploring_invalid_url_error() -> None:
 
 	assert not result.success
 	assert result.error_type == "InvalidJobUrl"
+
+
+async def test_exploring_uses_ats_registry_when_platform_scraper_missing() -> None:
+	register_scraper("smartrecruiters", StubATSSearchScraper)
+	stage = ExploringStage(AppConfig(), scrapers={})
+	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["smartrecruiters"]}})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	assert len(result.output) == 1
+	ctx = result.output[0]
+	assert ctx.run_id == "robo_corp_1001"
+	assert ctx.listing.platform == "smartrecruiters"
+	assert ctx.listing.apply_url == "https://www.smartrecruiters.com/company/jobs/1001/apply"
+
+
+async def test_exploring_resolves_apply_url_when_metadata_missing_it() -> None:
+	register_scraper("lever", StubLeverSearchNoApplyScraper)
+	stage = ExploringStage(AppConfig(), scrapers={})
+	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["lever"]}})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	ctx = result.output[0]
+	assert ctx.listing.job_url == "https://jobs.lever.co/acme/2002"
+	assert ctx.listing.apply_url == "https://jobs.lever.co/acme/2002/apply"
 

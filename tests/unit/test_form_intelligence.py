@@ -4,12 +4,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from autorole.config import SearchFilter
 from autorole.context import JobApplicationContext, PackagedResume
+from autorole.integrations.scrapers import register_scraper
+from autorole.integrations.scrapers.base import ATSScraper
+from autorole.integrations.scrapers.models import ApplicationForm, FormField, JobDescription, JobMetadata
 from autorole.stages import form_intelligence as mod
 from autorole.stages.form_intelligence import (
 	CaptchaSolver,
 	FormIntelligenceStage,
 	QuestionnaireAnswers,
+	_application_form_to_form_json,
 )
 from tests.conftest import SAMPLE_LISTING
 
@@ -54,6 +59,50 @@ class SequenceCaptchaSolver(CaptchaSolver):
 		value = self.sequence[self.calls] if self.calls < len(self.sequence) else False
 		self.calls += 1
 		return value
+
+
+class StubATSFormScraper(ATSScraper):
+	async def search_jobs(self, filters: SearchFilter) -> list[JobMetadata]:
+		_ = filters
+		return []
+
+	async def fetch_job_description(self, job_url: str) -> JobDescription:
+		_ = job_url
+		return JobDescription(
+			job_id="",
+			job_title="",
+			company_name="",
+			raw_html="",
+			plain_text="",
+			qualifications=[],
+			responsibilities=[],
+			preferred_skills=[],
+			culture_signals=[],
+		)
+
+	async def fetch_application_form(self, apply_url: str) -> ApplicationForm:
+		return ApplicationForm(
+			job_id="abc",
+			apply_url=apply_url,
+			fields=[
+				FormField(
+					name="email",
+					label="Email",
+					field_type="text",
+					required=True,
+					options=[],
+				),
+				FormField(
+					name="country",
+					label="Country",
+					field_type="select",
+					required=True,
+					options=["US", "CA"],
+				),
+			],
+			submit_selector="button[type='submit']",
+			form_selector="form",
+		)
 
 
 def _ctx() -> JobApplicationContext:
@@ -160,7 +209,7 @@ async def test_form_intelligence_blocks_on_unanswered_required_field(test_config
 	assert result.error_type == "UnansweredRequiredField"
 
 
-async def test_form_intelligence_blocks_on_captcha_without_solver(test_config: Any) -> None:
+async def test_form_intelligence_blocks_on_captcha_without_solver(test_config: Any, monkeypatch: Any) -> None:
 	page = MockPage(html="<html><body>recaptcha challenge</body></html>")
 	stage = FormIntelligenceStage(
 		test_config,
@@ -168,6 +217,11 @@ async def test_form_intelligence_blocks_on_captcha_without_solver(test_config: A
 		page,
 		captcha_solver=None,
 	)
+
+	async def fake_detect(_page: Any) -> str | None:
+		return "recaptcha_v2"
+
+	monkeypatch.setattr(mod, "_detect_captcha", fake_detect)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
 
@@ -237,3 +291,61 @@ async def test_form_intelligence_fails_when_preconditions_not_met(test_config: A
 
 	assert not result.success
 	assert result.error_type == "PreconditionError"
+
+
+async def test_form_intelligence_prefers_ats_form_extraction(test_config: Any, monkeypatch: Any) -> None:
+	register_scraper("smartrecruiters", StubATSFormScraper)
+	page = MockPage(html="<html><body>clean</body></html>")
+	answers = QuestionnaireAnswers(
+		answers=[
+			{"map": "direct:email:value", "answer": "me@example.com"},
+			{"map": "direct:country:choice", "answer": "US"},
+		],
+		unanswered_required=[],
+	)
+	stage = FormIntelligenceStage(test_config, MockLLM(answers), page)
+
+	ctx = _ctx().model_copy(
+		update={
+			"listing": SAMPLE_LISTING.model_copy(
+				update={"job_url": "https://www.smartrecruiters.com/company/jobs/123"}
+			)
+		}
+	)
+
+	async def should_not_be_called(_page: Any) -> dict[str, Any]:
+		raise AssertionError("fallback extractor should not run when ATS extraction succeeds")
+
+	monkeypatch.setattr(mod, "_extract_form_fields", should_not_be_called)
+
+	result = await stage.execute(Message(run_id="acme_123", payload=ctx.model_dump()))
+
+	assert result.success
+	assert page.goto_calls == 0
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	filled = out_ctx.form_intelligence.form_json_filled
+	fields = {f["id"]: f["value"] for f in filled["fields"]}
+	assert fields["email"] == "me@example.com"
+	assert fields["country"] == "US"
+
+
+def test_application_form_to_form_json_conversion() -> None:
+	app_form = ApplicationForm(
+		job_id="1",
+		apply_url="https://example.com/apply",
+		fields=[
+			FormField(name="name", label="Name", field_type="text", required=True, options=[]),
+			FormField(name="role", label="Role", field_type="select", required=False, options=["A"]),
+			FormField(name="skills", label="Skills", field_type="checkbox", required=False, options=["Python"]),
+			FormField(name="resume", label="Resume", field_type="file", required=False, options=[]),
+		],
+		submit_selector="button[type='submit']",
+		form_selector="form",
+	)
+
+	raw = _application_form_to_form_json(app_form)
+	by_id = {field["id"]: field for field in raw["fields"]}
+	assert by_id["name"]["type"] == "text"
+	assert by_id["role"]["type"] == "single_choice"
+	assert by_id["skills"]["type"] == "multiple_choice"
+	assert by_id["resume"]["type"] == "file_upload"

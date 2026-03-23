@@ -18,6 +18,7 @@ except Exception:
 
 class JobListing(BaseModel):
 	job_url: str
+	apply_url: str = ""
 	company_name: str
 	job_id: str
 	job_title: str

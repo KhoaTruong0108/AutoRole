@@ -27,6 +27,8 @@ class MockPage:
 		self.click_calls: list[str] = []
 		self.file_calls: list[tuple[str, str]] = []
 		self.raise_on_fill = False
+		self.raise_on_attach = False
+		self.raise_on_click = False
 
 	async def fill(self, selector: str, value: str) -> None:
 		if self.raise_on_fill:
@@ -43,9 +45,13 @@ class MockPage:
 		self.uncheck_calls.append(selector)
 
 	async def click(self, selector: str) -> None:
+		if self.raise_on_click:
+			raise TimeoutError("submit timeout")
 		self.click_calls.append(selector)
 
 	async def set_input_files(self, selector: str, path: str) -> None:
+		if self.raise_on_attach:
+			raise TimeoutError("attach timeout")
 		self.file_calls.append((selector, path))
 
 	async def content(self) -> str:
@@ -146,3 +152,62 @@ async def test_form_submission_fails_when_preconditions_not_met(test_config: Any
 
 	assert not result.success
 	assert result.error_type == "PreconditionError"
+
+
+async def test_form_submission_apply_dryrun_stops_after_submit(test_config: Any) -> None:
+	page = MockPage(content_text="application submitted")
+	stage = FormSubmissionStage(test_config, page)
+
+	result = await stage.execute(
+		Message(
+			run_id="acme_123",
+			payload=_ctx().model_dump(),
+			metadata={"dryrun_stop_after_submit": True},
+		)
+	)
+
+	assert result.success
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.applied is not None
+	assert out_ctx.applied.submission_status == "submitted_dryrun"
+	assert out_ctx.applied.submission_confirmed is False
+	assert page.click_calls, "Expected submit click to have been executed"
+
+
+async def test_form_submission_apply_dryrun_tolerates_attach_failure(test_config: Any) -> None:
+	page = MockPage(content_text="application submitted")
+	page.raise_on_attach = True
+	stage = FormSubmissionStage(test_config, page)
+
+	result = await stage.execute(
+		Message(
+			run_id="acme_123",
+			payload=_ctx().model_dump(),
+			metadata={"dryrun_stop_after_submit": True},
+		)
+	)
+
+	assert result.success
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.applied is not None
+	assert out_ctx.applied.submission_status == "submitted_dryrun"
+	assert page.click_calls, "Expected submit click to still execute"
+
+
+async def test_form_submission_apply_dryrun_tolerates_submit_click_failure(test_config: Any) -> None:
+	page = MockPage(content_text="application submitted")
+	page.raise_on_click = True
+	stage = FormSubmissionStage(test_config, page)
+
+	result = await stage.execute(
+		Message(
+			run_id="acme_123",
+			payload=_ctx().model_dump(),
+			metadata={"dryrun_stop_after_submit": True},
+		)
+	)
+
+	assert result.success
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.applied is not None
+	assert out_ctx.applied.submission_status == "submitted_dryrun_submit_failed"

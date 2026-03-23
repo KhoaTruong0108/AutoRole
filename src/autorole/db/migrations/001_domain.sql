@@ -66,3 +66,10 @@ CREATE TABLE IF NOT EXISTS job_applications (
 
 CREATE INDEX IF NOT EXISTS idx_applications_status ON job_applications(submission_status);
 CREATE INDEX IF NOT EXISTS idx_applications_date ON job_applications(applied_at DESC);
+
+CREATE TABLE IF NOT EXISTS pipeline_checkpoints (
+	run_id             TEXT PRIMARY KEY REFERENCES job_listings(run_id),
+	last_success_stage TEXT NOT NULL,
+	context_json       TEXT NOT NULL,
+	updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);

@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from bs4 import BeautifulSoup
 
 from autorole.context import JobListing
+from autorole.integrations.scrapers import get_scraper
 from autorole.integrations.scrapers.base import JobPostingExtractor
 
 
@@ -21,10 +22,26 @@ class GenericJobPostingExtractor(JobPostingExtractor):
 			raise ValueError(f"Invalid job URL: {job_url}")
 
 		platform = (platform_hint or _infer_platform(job_url)).lower()
-		await self._page.goto(job_url, wait_until="domcontentloaded", timeout=30_000)
-		html = await self._page.content()
 
-		title, company = _extract_title_company(html)
+		title = ""
+		company = ""
+
+		# Prefer ATS-native JD extraction for stable metadata on platforms like Lever/Greenhouse.
+		try:
+			scraper = get_scraper(job_url, page=self._page)
+			jd = await scraper.fetch_job_description(job_url)
+			title = jd.job_title.strip()
+			company = jd.company_name.strip()
+		except Exception:
+			pass
+
+		if not title or not company:
+			await self._page.goto(job_url, wait_until="domcontentloaded", timeout=30_000)
+			html = await self._page.content()
+			page_title, page_company = _extract_title_company(html)
+			title = title or page_title
+			company = company or page_company
+
 		if not title or not company:
 			raise ValueError("Could not extract required job title/company from page")
 
