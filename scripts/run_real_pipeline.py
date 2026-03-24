@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -188,6 +188,12 @@ def _configure_trace_logger(base_dir: Path) -> tuple[logging.Logger, Path]:
     handler = logging.FileHandler(log_path, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     logger.addHandler(handler)
+
+    # Mirror errors to terminal so failures are visible immediately during local runs.
+    stderr_handler = logging.StreamHandler()
+    stderr_handler.setLevel(logging.ERROR)
+    stderr_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    logger.addHandler(stderr_handler)
     return logger, log_path
 
 
@@ -732,6 +738,13 @@ async def run_listing(
             filename="output.json",
             content=json.dumps(ctx.applied.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
         )
+        _record_stage_artifact(
+            logger=trace_logger,
+            run_dir=run_artifacts_dir,
+            stage_name="form_submission",
+            filename="field_fill_report.json",
+            content=json.dumps(ctx.applied.fill_report, indent=2, ensure_ascii=False) + "\n",
+        )
         print(
             "[ok] form_submission -> "
             f"status={ctx.applied.submission_status} confirmed={ctx.applied.submission_confirmed}"
@@ -741,7 +754,7 @@ async def run_listing(
         print(f"[resume] skipping form_submission (start stage: {start_stage})")
 
     if mode == "apply-dryrun":
-        print("[stop] apply-dryrun mode enabled; stopped after _submit_form()")
+        print("[stop] apply-dryrun mode enabled; completed flow with submit click skipped")
         return
 
     if should_run("concluding"):
@@ -882,7 +895,12 @@ async def amain() -> int:
                     "gate": BestFitGate(max_attempts=config.tailoring.max_attempts),
                     "packaging": PackagingStage(config, renderer),
                     "session": SessionStage(config, CredentialStore()),
-                    "form_intelligence": FormIntelligenceStage(config, llm_client, form_page),
+                    "form_intelligence": FormIntelligenceStage(
+                        config,
+                        llm_client,
+                        form_page,
+                        use_random_questionnaire_answers=args.mode in {"observe", "apply-dryrun"},
+                    ),
                     "form_submission": FormSubmissionStage(config, form_page),
                     "concluding": ConcludingStage(config, repo),
                 }
@@ -960,6 +978,9 @@ async def amain() -> int:
                         start_stage=start_stage,
                     )
 
+                print("All selected listings processed. Wai for confirm for 30s")
+                await asyncio.sleep(30)
+                
                 await browser_context.close()
                 await browser.close()
     except Exception:

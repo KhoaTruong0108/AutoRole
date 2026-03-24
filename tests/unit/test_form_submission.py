@@ -154,7 +154,7 @@ async def test_form_submission_fails_when_preconditions_not_met(test_config: Any
 	assert result.error_type == "PreconditionError"
 
 
-async def test_form_submission_apply_dryrun_stops_after_submit(test_config: Any) -> None:
+async def test_form_submission_apply_dryrun_skips_submit_click(test_config: Any) -> None:
 	page = MockPage(content_text="application submitted")
 	stage = FormSubmissionStage(test_config, page)
 
@@ -169,9 +169,9 @@ async def test_form_submission_apply_dryrun_stops_after_submit(test_config: Any)
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
 	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "submitted_dryrun"
+	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
 	assert out_ctx.applied.submission_confirmed is False
-	assert page.click_calls, "Expected submit click to have been executed"
+	assert not page.click_calls, "Expected submit click to be skipped in dry-run"
 
 
 async def test_form_submission_apply_dryrun_tolerates_attach_failure(test_config: Any) -> None:
@@ -190,11 +190,10 @@ async def test_form_submission_apply_dryrun_tolerates_attach_failure(test_config
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
 	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "submitted_dryrun"
-	assert page.click_calls, "Expected submit click to still execute"
+	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
 
 
-async def test_form_submission_apply_dryrun_tolerates_submit_click_failure(test_config: Any) -> None:
+async def test_form_submission_apply_dryrun_ignores_submit_click_failure(test_config: Any) -> None:
 	page = MockPage(content_text="application submitted")
 	page.raise_on_click = True
 	stage = FormSubmissionStage(test_config, page)
@@ -210,4 +209,5 @@ async def test_form_submission_apply_dryrun_tolerates_submit_click_failure(test_
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
 	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "submitted_dryrun_submit_failed"
+	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
+	assert not page.click_calls, "Submit should not be attempted in dry-run"

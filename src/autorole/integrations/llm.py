@@ -165,6 +165,7 @@ class OllamaLLMClient(LLMClient):
 			"stream": False,
 			"options": {"temperature": temp},
 		}
+
 		if response_model is not None:
 			payload["format"] = "json"
 

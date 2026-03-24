@@ -69,6 +69,7 @@ class ApplicationResult(BaseModel):
 	resume_id: str
 	questionnaire: list[dict[str, Any]] = Field(default_factory=list)
 	form_json: dict[str, Any] = Field(default_factory=dict)
+	fill_report: dict[str, Any] = Field(default_factory=dict)
 	submission_status: str
 	submission_confirmed: bool
 	applied_at: datetime

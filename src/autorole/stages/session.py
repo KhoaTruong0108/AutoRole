@@ -49,7 +49,7 @@ class SessionStage(Stage):
 	name = "session"
 	concurrency = 1
 
-	PUBLIC_PLATFORMS = {"greenhouse", "lever", "workday"}
+	PUBLIC_PLATFORMS = {"ashby", "greenhouse", "lever", "workday"}
 
 	def __init__(self, config: AppConfig, credentials: CredentialStore) -> None:
 		self._config = config

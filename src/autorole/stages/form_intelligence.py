@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from autorole.config import AppConfig
 from autorole.context import FormIntelligenceResult, JobApplicationContext
+from autorole.integrations.form_controls import AsyncDOMFormExtractor, FormExtractor
 from autorole.integrations.llm import LLMClient
 from autorole.integrations.scrapers import get_scraper
 from autorole.integrations.scrapers.models import ApplicationForm
@@ -77,11 +79,16 @@ class FormIntelligenceStage(Stage):
 		llm_client: LLMClient,
 		page: Any,
 		captcha_solver: CaptchaSolver | None = None,
+		form_extractor: FormExtractor | None = None,
+		use_random_questionnaire_answers: bool = False,
 	) -> None:
 		self._config = config
 		self._llm = llm_client
 		self._page = page
 		self._captcha_solver = captcha_solver
+		self._has_custom_form_extractor = form_extractor is not None
+		self._form_extractor = form_extractor or AsyncDOMFormExtractor()
+		self._use_random_questionnaire_answers = use_random_questionnaire_answers
 
 	async def execute(self, message: Message) -> StageResult:
 		ctx = JobApplicationContext.model_validate(message.payload)
@@ -127,21 +134,27 @@ class FormIntelligenceStage(Stage):
 					continue
 
 			try:
-				form_json_raw = await _extract_form_fields(self._page)
+				if self._has_custom_form_extractor:
+					form_json_raw = await self._form_extractor.extract(self._page)
+				else:
+					form_json_raw = await _extract_form_fields(self._page)
 			except Exception as exc:
 				return StageResult.fail(f"Form extraction failed: {exc}", "FormExtractionError")
 
 		questionnaire = _build_questionnaire(form_json_raw)
 		user_profile = _load_user_profile(self._config)
 
-		try:
-			answers = await self._llm.call(
-				system=_build_answering_system_prompt(user_profile),
-				user=_render_questionnaire(questionnaire),
-				response_model=QuestionnaireAnswers,
-			)
-		except Exception as exc:
-			return StageResult.fail(f"Questionnaire answering failed: {exc}", "LLMResponseError")
+		if self._use_random_questionnaire_answers:
+			answers = _answer_questionnaire_with_random_filler(questionnaire)
+		else:
+			try:
+				answers = await self._llm.call(
+					system=_build_answering_system_prompt(user_profile),
+					user=_render_questionnaire(questionnaire),
+					response_model=QuestionnaireAnswers,
+				)
+			except Exception as exc:
+				return StageResult.fail(f"Questionnaire answering failed: {exc}", "LLMResponseError")
 
 		if answers.unanswered_required:
 			fields = ", ".join(answers.unanswered_required)
@@ -207,43 +220,8 @@ async def _detect_captcha(page: Any) -> str | None:
 
 
 async def _extract_form_fields(page: Any) -> dict[str, Any]:
-	elements = await page.query_selector_all("input, select, textarea")
-	fields: list[dict[str, Any]] = []
-	for element in elements:
-		name = await element.get_attribute("name") or await element.get_attribute("id")
-		if not name:
-			continue
-		tag = await element.evaluate("el => el.tagName.toLowerCase()")
-		type_attr = await element.get_attribute("type")
-		label = await element.get_attribute("aria-label") or name
-		required = (await element.get_attribute("required")) is not None
-
-		field_type = "text"
-		options: list[str] = []
-		if tag == "select":
-			field_type = "single_choice"
-			options = await element.evaluate(
-				"el => Array.from(el.options).map(o => o.textContent?.trim() ?? '')"
-			)
-		elif type_attr in {"checkbox"}:
-			field_type = "multiple_choice"
-		elif type_attr in {"radio"}:
-			field_type = "single_choice"
-		elif type_attr == "file":
-			field_type = "file_upload"
-
-		fields.append(
-			{
-				"id": name,
-				"label": label,
-				"type": field_type,
-				"required": required,
-				"options": options,
-				"value": "" if field_type != "multiple_choice" else [],
-			}
-		)
-
-	return {"fields": fields}
+	# Backward-compatible helper retained for tests and legacy call sites.
+	return await AsyncDOMFormExtractor().extract(page)
 
 
 def _build_questionnaire(form_json_raw: dict[str, Any]) -> list[dict[str, Any]]:
@@ -278,6 +256,58 @@ def _render_questionnaire(questionnaire: list[dict[str, Any]]) -> str:
 		parts.append(f"Answer: {item.get('answer', '')}")
 		parts.append("")
 	return "\n".join(parts)
+
+
+def _answer_questionnaire_with_random_filler(questionnaire: list[dict[str, Any]]) -> QuestionnaireAnswers:
+	from autorole.mock_data.fill_questionnaire_random import fill_questionnaire_text
+
+	rendered = _render_questionnaire(questionnaire)
+	filled = fill_questionnaire_text(rendered)
+	return _parse_questionnaire_answers_from_markdown(filled)
+
+
+def _parse_questionnaire_answers_from_markdown(text: str) -> QuestionnaireAnswers:
+	answers: list[dict[str, str]] = []
+	unanswered_required: list[str] = []
+
+	question_pattern = re.compile(r"^Question:\s*(.*)$")
+	map_pattern = re.compile(r"^Map:\s*(.*)$")
+	answer_pattern = re.compile(r"^Answer:\s*(.*)$")
+
+	current_map = ""
+	current_question = ""
+
+	for raw_line in text.splitlines():
+		line = raw_line.strip()
+		if line.startswith("## Q"):
+			current_map = ""
+			current_question = ""
+			continue
+
+		map_match = map_pattern.match(line)
+		if map_match:
+			current_map = map_match.group(1).strip()
+			continue
+
+		question_match = question_pattern.match(line)
+		if question_match:
+			current_question = question_match.group(1).strip()
+			continue
+
+		answer_match = answer_pattern.match(line)
+		if not answer_match:
+			continue
+
+		answer = answer_match.group(1).strip()
+		if not current_map:
+			continue
+		answers.append({"map": current_map, "answer": answer})
+
+		is_required = "*" in current_question
+		if is_required and not answer:
+			unanswered_required.append(current_map)
+
+	return QuestionnaireAnswers(answers=answers, unanswered_required=unanswered_required)
 
 
 def _build_answering_system_prompt(user_profile: dict[str, Any]) -> str:

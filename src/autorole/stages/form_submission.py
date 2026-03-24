@@ -5,6 +5,7 @@ from typing import Any
 
 from autorole.config import AppConfig
 from autorole.context import ApplicationResult, JobApplicationContext
+from autorole.integrations.form_controls import AsyncDOMFormApplier, FormApplier
 
 try:
 	from pipeline.interfaces import Stage
@@ -46,38 +47,54 @@ class FormSubmissionStage(Stage):
 	name = "form_submission"
 	concurrency = 1
 
-	def __init__(self, config: AppConfig, page: Any) -> None:
+	def __init__(self, config: AppConfig, page: Any, form_applier: FormApplier | None = None) -> None:
 		self._config = config
 		self._page = page
+		self._form_applier = form_applier or AsyncDOMFormApplier()
 
 	async def execute(self, message: Message) -> StageResult:
 		_ = self._config
 		ctx = JobApplicationContext.model_validate(message.payload)
-		dryrun_stop_after_submit = bool(getattr(message, "metadata", {}).get("dryrun_stop_after_submit", False))
-		if ctx.form_intelligence is None or ctx.packaged is None:
+		metadata = getattr(message, "metadata", {}) or {}
+		# Backward-compatible flag: dryrun_stop_after_submit now means skip submit click.
+		dryrun_skip_submit = bool(
+			metadata.get("dryrun_skip_submit", metadata.get("dryrun_stop_after_submit", False))
+		)
+		if ctx.listing is None or ctx.form_intelligence is None or ctx.packaged is None:
 			return StageResult.fail(
-				"FormSubmissionStage: form_intelligence and packaged must be set",
+				"FormSubmissionStage: listing, form_intelligence and packaged must be set",
 				"PreconditionError",
 			)
 
-		try:
-			await _fill_form(self._page, ctx.form_intelligence.form_json_filled)
+		if hasattr(self._page, "goto"):
+			apply_url = ctx.listing.apply_url or ctx.listing.job_url
 			try:
-				await _attach_resume(self._page, ctx.packaged.pdf_path)
+				await self._page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
+			except Exception as exc:
+				return StageResult.fail(f"Navigation failed: {exc}", "NavigationError")
+
+		try:
+			await self._form_applier.fill(self._page, ctx.form_intelligence.form_json_filled)
+			fill_report = await _build_fill_report(self._page, ctx.form_intelligence.form_json_filled)
+			try:
+				await self._form_applier.attach_resume(self._page, ctx.packaged.pdf_path)
+				fill_report["resume_attachment"] = {
+					"expected_path": ctx.packaged.pdf_path,
+					"status": "attached",
+				}
 			except Exception:
-				if not dryrun_stop_after_submit:
+				fill_report["resume_attachment"] = {
+					"expected_path": ctx.packaged.pdf_path,
+					"status": "failed" if not dryrun_skip_submit else "skipped_dryrun",
+				}
+				if not dryrun_skip_submit:
 					raise
 			confirmed = False
-			submission_status = "submitted_dryrun" if dryrun_stop_after_submit else "submitted"
-			try:
-				await _submit_form(self._page)
-			except Exception:
-				if not dryrun_stop_after_submit:
-					raise
-				submission_status = "submitted_dryrun_submit_failed"
+			submission_status = "dryrun_submit_skipped" if dryrun_skip_submit else "submitted"
 
-			if not dryrun_stop_after_submit:
-				confirmed = await _confirm_submission(self._page)
+			if not dryrun_skip_submit:
+				await self._form_applier.submit(self._page)
+				confirmed = await self._form_applier.confirm(self._page)
 				submission_status = "submitted" if confirmed else "unconfirmed"
 		except Exception as exc:
 			return StageResult.fail(f"Submission failed: {exc}", type(exc).__name__)
@@ -86,6 +103,7 @@ class FormSubmissionStage(Stage):
 			resume_id=ctx.packaged.resume_id,
 			questionnaire=ctx.form_intelligence.questionnaire,
 			form_json=ctx.form_intelligence.form_json_filled,
+			fill_report=fill_report,
 			submission_status=submission_status,
 			submission_confirmed=confirmed,
 			applied_at=datetime.now(timezone.utc),
@@ -93,50 +111,132 @@ class FormSubmissionStage(Stage):
 		return StageResult.ok(ctx.model_copy(update={"applied": applied}))
 
 
-async def _fill_form(page: Any, form_json_filled: dict[str, Any]) -> None:
+async def _build_fill_report(page: Any, form_json_filled: dict[str, Any]) -> dict[str, Any]:
+	fields_report: list[dict[str, Any]] = []
 	for field in form_json_filled.get("fields", []):
-		field_id = field.get("id")
-		if not field_id:
-			continue
-		selector = f"[name='{field_id}'], #{field_id}"
-		field_type = field.get("type", "text")
-		value = field.get("value")
+		field_id = str(field.get("id") or "").strip()
+		field_type = str(field.get("type") or "text")
+		expected = field.get("value")
+		entry = {
+			"id": field_id,
+			"label": field.get("label") or field_id,
+			"type": field_type,
+			"expected": expected,
+			"actual": None,
+			"status": "unknown",
+			"error": "",
+		}
 
-		if field_type in {"text", "textarea", "email", "tel"}:
-			await page.fill(selector, "" if value is None else str(value))
-		elif field_type == "single_choice":
-			await page.select_option(selector, "" if value is None else str(value))
-		elif field_type == "multiple_choice":
-			if isinstance(value, list):
-				for option in value:
-					option_selector = f"{selector}[value='{option}']"
-					await page.check(option_selector)
-		elif field_type == "checkbox":
-			if bool(value):
-				await page.check(selector)
-			else:
-				await page.uncheck(selector)
-		elif field_type == "radio":
-			await page.click(f"{selector}[value='{value}']")
+		if not field_id:
+			entry["status"] = "mismatched"
+			entry["error"] = "missing_field_id"
+			fields_report.append(entry)
+			continue
+
+		if not hasattr(page, "locator"):
+			entry["error"] = "page_has_no_locator"
+			fields_report.append(entry)
+			continue
+
+		selector = _name_or_id_selector(field_id)
+		try:
+			actual = await _read_field_value(page, selector, field_type)
+			entry["actual"] = actual
+			entry["status"] = "matched" if _values_match(expected, actual) else "mismatched"
+		except Exception as exc:
+			entry["error"] = str(exc)
+		fields_report.append(entry)
+
+	total = len(fields_report)
+	matched = sum(1 for item in fields_report if item["status"] == "matched")
+	mismatched = sum(1 for item in fields_report if item["status"] == "mismatched")
+	unknown = total - matched - mismatched
+
+	return {
+		"summary": {
+			"total_fields": total,
+			"matched": matched,
+			"mismatched": mismatched,
+			"unknown": unknown,
+		},
+		"fields": fields_report,
+	}
+
+
+def _name_or_id_selector(field_id: str) -> str:
+	return f"[name='{field_id}'], [id='{field_id}']"
+
+
+async def _read_field_value(page: Any, selector: str, field_type: str) -> Any:
+	locator = page.locator(selector)
+	count = await locator.count()
+	if count == 0:
+		raise RuntimeError("field_not_found")
+
+	entries = await locator.evaluate_all(
+		"""
+		els => els.map(el => {
+		  const tag = (el.tagName || '').toLowerCase();
+		  const typ = ((el.type || '') + '').toLowerCase();
+		  if (tag === 'select') {
+		    const selected = Array.from(el.selectedOptions || []).map(o => o.value || o.textContent || '');
+		    return { tag, type: 'select', value: selected.length <= 1 ? (selected[0] || '') : selected, checked: null };
+		  }
+		  if (typ === 'checkbox' || typ === 'radio') {
+		    return { tag, type: typ, value: el.value || '', checked: !!el.checked };
+		  }
+		  return { tag, type: typ || tag, value: el.value || '', checked: null };
+		})
+		"""
+	)
+
+	if field_type == "multiple_choice":
+		selected = [str(item.get("value") or "") for item in entries if item.get("checked")]
+		return [value for value in selected if value]
+
+	if field_type == "checkbox":
+		return any(bool(item.get("checked")) for item in entries)
+
+	if field_type in {"radio", "single_choice"}:
+		for item in entries:
+			if item.get("checked"):
+				return str(item.get("value") or "")
+		for item in entries:
+			value = item.get("value")
+			if isinstance(value, list) and value:
+				return str(value[0])
+			if isinstance(value, str) and value:
+				return value
+		return ""
+
+	value = entries[0].get("value")
+	if isinstance(value, list):
+		return value[0] if value else ""
+	return str(value or "")
+
+
+def _values_match(expected: Any, actual: Any) -> bool:
+	if isinstance(expected, list):
+		expected_norm = sorted(str(v).strip() for v in expected)
+		actual_values = actual if isinstance(actual, list) else ([] if actual is None else [actual])
+		actual_norm = sorted(str(v).strip() for v in actual_values)
+		return expected_norm == actual_norm
+	if isinstance(expected, bool):
+		return bool(actual) == expected
+	return str(expected or "").strip() == str(actual or "").strip()
+
+
+async def _fill_form(page: Any, form_json_filled: dict[str, Any]) -> None:
+	await AsyncDOMFormApplier().fill(page, form_json_filled)
 
 
 async def _attach_resume(page: Any, pdf_path: str) -> None:
-	await page.set_input_files("input[type='file']", pdf_path)
+	await AsyncDOMFormApplier().attach_resume(page, pdf_path)
 
 
 async def _submit_form(page: Any) -> None:
-	await page.click("button[type='submit'], input[type='submit']")
-	if hasattr(page, "wait_for_load_state"):
-		await page.wait_for_load_state("networkidle")
+	await AsyncDOMFormApplier().submit(page)
 
 
 async def _confirm_submission(page: Any) -> bool:
-	content = (await page.content()).lower()
-	return any(
-		signal in content
-		for signal in [
-			"application submitted",
-			"thank you",
-			"we received",
-		]
-	)
+	return await AsyncDOMFormApplier().confirm(page)
