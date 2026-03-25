@@ -16,9 +16,11 @@ KNOWN_APPLY_SUBURL_BY_PLATFORM: dict[str, str] = {
 	"lever": "/apply",
 	"smartrecruiters": "/apply",
 	"jobvite": "/apply",
+	"ashby": "/application",
 }
 
 KNOWN_APPLY_SUBURL_BY_HOST: dict[str, str] = {
+	"jobs.ashbyhq.com": "/application",
 	"jobs.lever.co": "/apply",
 	"smartrecruiters.com": "/apply",
 	"jobs.jobvite.com": "/apply",
@@ -216,6 +218,8 @@ def _platform_seed_url(platform: str) -> str:
 	platform_lower = platform.lower()
 	if platform_lower == "lever":
 		return "https://jobs.lever.co/"
+	if platform_lower == "ashby":
+		return "https://jobs.ashbyhq.com"
 	if platform_lower == "greenhouse":
 		return "https://boards.greenhouse.io/"
 	if platform_lower == "linkedin":

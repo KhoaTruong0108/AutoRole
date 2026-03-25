@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import difflib
+import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from autorole.config import AppConfig, TailoringConfig
 from autorole.context import DiffChange, DiffReport, DiffSection, JobApplicationContext, TailoredResume
 from autorole.integrations.llm import LLMClient, LLMResponseError
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -236,3 +239,64 @@ def _infer_criterion(text: str, jd_breakdown: dict[str, object]) -> str:
 	if "culture" in serialized or "collaboration" in serialized:
 		return "culture_fit"
 	return "technical_skills"
+
+
+class TailoringExecutor(AutoRoleStage):
+	name = "tailoring"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		run_id = ctx.run_id
+		t = ctx.tailored
+		if t is None:
+			return
+
+		self._write_artifact(
+			f"attempt_{attempt}_summary.json",
+			json.dumps(
+				{
+					"tailoring_degree": t.tailoring_degree,
+					"resume_id": t.resume_id,
+					"parent_resume_id": t.parent_resume_id,
+					"file_path": t.file_path,
+					"diff_summary": t.diff_summary,
+				},
+				indent=2,
+				ensure_ascii=False,
+			)
+			+ "\n",
+			run_id,
+		)
+		self._write_artifact(
+			f"attempt_{attempt}_resume_diff.md",
+			(
+				f"# Resume Diff (attempt {attempt})\n\n"
+				f"Tailoring degree: {t.tailoring_degree}\n\n"
+				f"Source file: {t.file_path}\n\n"
+				f"## Diff Summary\n\n{t.diff_summary}\n"
+			),
+			run_id,
+		)
+		await self._repo.upsert_tailored(run_id, t)
+
+	async def on_failure(
+		self,
+		ctx: JobApplicationContext,
+		result: Any,
+		attempt: int,
+	) -> JobApplicationContext | None:
+		print(f"[fail] {self.name}: {result.error}")
+		self._write_artifact(
+			f"attempt_{attempt}_error.txt",
+			f"error_type={getattr(result, 'error_type', '')}\nerror={result.error}\n",
+			ctx.run_id,
+		)
+		from autorole.stage_base import _emit_resume_hint
+
+		_emit_resume_hint(self._logger, ctx.run_id, self._mode, self.name)
+		return None
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.tailored is None:
+			return
+		print(f"[ok] tailoring -> degree={ctx.tailored.tailoring_degree} file={ctx.tailored.file_path}")

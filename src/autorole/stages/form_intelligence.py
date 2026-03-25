@@ -14,6 +14,7 @@ from autorole.integrations.form_controls import AsyncDOMFormExtractor, FormExtra
 from autorole.integrations.llm import LLMClient
 from autorole.integrations.scrapers import get_scraper
 from autorole.integrations.scrapers.models import ApplicationForm
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -348,3 +349,74 @@ def _merge_answers(
 			field["value"] = answer
 	merged["fields"] = fields
 	return merged
+
+
+class FormIntelligenceExecutor(AutoRoleStage):
+	name = "form_intelligence"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		fi = ctx.form_intelligence
+		if fi is None:
+			return
+		self._write_artifact(
+			"questionnaire.json",
+			json.dumps(fi.questionnaire, indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+		self._write_artifact(
+			"form_json_filled.json",
+			json.dumps(fi.form_json_filled, indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+		md_lines = [
+			"# Answered Form",
+			"",
+			"## Questionnaire",
+			"",
+			json.dumps(fi.questionnaire, indent=2, ensure_ascii=False),
+			"",
+			"## Filled Form JSON",
+			"",
+			json.dumps(fi.form_json_filled, indent=2, ensure_ascii=False),
+			"",
+		]
+		self._write_artifact("answered_form.md", "\n".join(md_lines), ctx.run_id)
+
+	async def on_failure(self, ctx: JobApplicationContext, result: Any, attempt: int) -> JobApplicationContext | None:
+		_ = attempt
+		if self._mode == "apply-dryrun":
+			fallback = FormIntelligenceResult(
+				questionnaire=[],
+				form_json_filled={"fields": []},
+				generated_at=datetime.now(timezone.utc),
+			)
+			self._write_artifact(
+				"error.txt",
+				(
+					f"error_type={getattr(result, 'error_type', '')}\n"
+					f"error={result.error}\n"
+					"fallback=empty_form_payload\n"
+				),
+				ctx.run_id,
+			)
+			self._write_artifact(
+				"answered_form.md",
+				(
+					"# Answered Form\n\n"
+					"Form intelligence failed; fallback empty payload was used in apply-dryrun mode.\n\n"
+					"## Questionnaire\n\n[]\n\n"
+					"## Filled Form JSON\n\n{\n  \"fields\": []\n}\n"
+				),
+				ctx.run_id,
+			)
+			print(
+				f"[warn] form_intelligence failed in apply-dryrun mode; {result.error} "
+				"continuing with empty form payload"
+			)
+			return ctx.model_copy(update={"form_intelligence": fallback})
+		return await super().on_failure(ctx, result, attempt)
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		print("[ok] form_intelligence -> form extracted and filled")

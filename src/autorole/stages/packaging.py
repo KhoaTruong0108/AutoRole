@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,7 @@ from typing import Any
 from autorole.config import AppConfig
 from autorole.context import JobApplicationContext, PackagedResume
 from autorole.integrations.renderer import ResumeRenderer
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -72,3 +74,47 @@ class PackagingStage(Stage):
 			packaged_at=datetime.now(timezone.utc),
 		)
 		return StageResult.ok(ctx.model_copy(update={"packaged": packaged}))
+
+
+class PackagingExecutor(AutoRoleStage):
+	name = "packaging"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.packaged is None:
+			return
+		self._write_artifact(
+			"output.json",
+			json.dumps(ctx.packaged.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+
+	async def on_failure(self, ctx: JobApplicationContext, result: Any, attempt: int) -> JobApplicationContext | None:
+		_ = attempt
+		if self._mode == "apply-dryrun" and ctx.tailored is not None:
+			fallback = PackagedResume(
+				resume_id=ctx.tailored.resume_id,
+				pdf_path=ctx.tailored.file_path,
+				packaged_at=datetime.now(timezone.utc),
+			)
+			self._write_artifact(
+				"error.txt",
+				(
+					f"error_type={getattr(result, 'error_type', '')}\n"
+					f"error={result.error}\n"
+					"fallback=tailored_markdown\n"
+				),
+				ctx.run_id,
+			)
+			print(
+				f"[warn] packaging failed in apply-dryrun mode; {result.error} "
+				"falling back to tailored markdown for upload"
+			)
+			return ctx.model_copy(update={"packaged": fallback})
+		return await super().on_failure(ctx, result, attempt)
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.packaged is None:
+			return
+		print(f"[ok] packaging -> pdf={ctx.packaged.pdf_path}")

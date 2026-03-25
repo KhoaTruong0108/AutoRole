@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from autorole.config import AppConfig, ScoringWeights
 from autorole.context import JobApplicationContext, ScoreReport
 from autorole.integrations.llm import LLMClient, LLMResponseError
 from autorole.integrations.scrapers import get_scraper
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -210,3 +212,85 @@ def compute_overall_score(
 	for key, weight in normalised.items():
 		total += float(criterion_scores.get(key, 0.0)) * weight
 	return total
+
+
+class ScoringExecutor(AutoRoleStage):
+	name = "scoring"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		run_id = ctx.run_id
+		score = ctx.score
+		if score is None:
+			return
+
+		self._write_artifact(
+			f"attempt_{attempt}_summary.json",
+			json.dumps(
+				{
+					"overall_score": score.overall_score,
+					"criteria_scores": score.criteria_scores,
+					"matched": score.matched,
+					"mismatched": score.mismatched,
+					"jd_breakdown": score.jd_breakdown,
+				},
+				indent=2,
+				ensure_ascii=False,
+			)
+			+ "\n",
+			run_id,
+		)
+		self._write_artifact(
+			f"attempt_{attempt}_job_description.html",
+			score.jd_html,
+			run_id,
+		)
+		criteria_md = [
+			f"# Scoring Criteria (attempt {attempt})",
+			"",
+			f"Overall score: {score.overall_score:.3f}",
+			"",
+			"## Criteria Scores",
+			"",
+			json.dumps(score.criteria_scores, indent=2, ensure_ascii=False),
+			"",
+			"## Job Requirements Breakdown",
+			"",
+			json.dumps(score.jd_breakdown, indent=2, ensure_ascii=False),
+			"",
+			"## Matched",
+			"",
+			json.dumps(score.matched, indent=2, ensure_ascii=False),
+			"",
+			"## Mismatched",
+			"",
+			json.dumps(score.mismatched, indent=2, ensure_ascii=False),
+			"",
+		]
+		self._write_artifact(
+			f"attempt_{attempt}_criteria.md",
+			"\n".join(criteria_md),
+			run_id,
+		)
+		await self._repo.upsert_score(run_id, score, attempt=attempt)
+
+	async def on_failure(
+		self,
+		ctx: JobApplicationContext,
+		result: Any,
+		attempt: int,
+	) -> JobApplicationContext | None:
+		print(f"[fail] {self.name}: {result.error}")
+		self._write_artifact(
+			f"attempt_{attempt}_error.txt",
+			f"error_type={getattr(result, 'error_type', '')}\nerror={result.error}\n",
+			ctx.run_id,
+		)
+		from autorole.stage_base import _emit_resume_hint
+
+		_emit_resume_hint(self._logger, ctx.run_id, self._mode, self.name)
+		return None
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		if ctx.score is None:
+			return
+		print(f"[ok] scoring -> overall_score={ctx.score.overall_score:.3f} (attempt {attempt})")

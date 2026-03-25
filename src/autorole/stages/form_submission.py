@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
 from autorole.config import AppConfig
 from autorole.context import ApplicationResult, JobApplicationContext
 from autorole.integrations.form_controls import AsyncDOMFormApplier, FormApplier
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -240,3 +242,41 @@ async def _submit_form(page: Any) -> None:
 
 async def _confirm_submission(page: Any) -> bool:
 	return await AsyncDOMFormApplier().confirm(page)
+
+
+class FormSubmissionExecutor(AutoRoleStage):
+	name = "form_submission"
+
+	def _build_message(self, ctx: JobApplicationContext, attempt: int, metadata: dict[str, Any]) -> Any:
+		return super()._build_message(
+			ctx,
+			attempt,
+			{
+				**metadata,
+				"dryrun_stop_after_submit": self._mode == "apply-dryrun",
+			},
+		)
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.applied is None:
+			return
+		self._write_artifact(
+			"output.json",
+			json.dumps(ctx.applied.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+		self._write_artifact(
+			"field_fill_report.json",
+			json.dumps(ctx.applied.fill_report, indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.applied is None:
+			return
+		print(
+			"[ok] form_submission -> "
+			f"status={ctx.applied.submission_status} confirmed={ctx.applied.submission_confirmed}"
+		)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -8,6 +9,7 @@ import httpx
 from autorole.config import AppConfig
 from autorole.context import JobApplicationContext, SessionResult
 from autorole.integrations.credentials import CredentialStore
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -111,3 +113,24 @@ async def _validate_session(platform: str, cookie: str) -> bool:
 	async with httpx.AsyncClient(cookies={"session": cookie}) as client:
 		response = await client.get(url, follow_redirects=False)
 		return response.status_code == 200
+
+
+class SessionExecutor(AutoRoleStage):
+	name = "session"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.session is None:
+			return
+		self._write_artifact(
+			"output.json",
+			json.dumps(ctx.session.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+			ctx.run_id,
+		)
+		await self._repo.upsert_session(ctx.run_id, ctx.session)
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = attempt
+		if ctx.session is None:
+			return
+		print(f"[ok] session -> authenticated={ctx.session.authenticated}")

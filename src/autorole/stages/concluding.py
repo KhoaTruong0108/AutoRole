@@ -7,6 +7,7 @@ from typing import Any
 from autorole.config import AppConfig
 from autorole.context import JobApplicationContext
 from autorole.db.repository import JobRepository
+from autorole.stage_base import AutoRoleStage
 
 try:
 	from pipeline.interfaces import Stage
@@ -80,3 +81,15 @@ class ConcludingStage(Stage):
 			return StageResult.fail(f"Concluding write failed: {exc}", type(exc).__name__)
 
 		return StageResult.ok(ctx)
+
+
+class ConcludingExecutor(AutoRoleStage):
+	name = "concluding"
+
+	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = (ctx, attempt)
+		self._write_artifact("output.txt", "Concluding stage completed successfully.\n", ctx.run_id)
+
+	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
+		_ = (ctx, attempt)
+		print("[ok] concluding -> job application persisted")
