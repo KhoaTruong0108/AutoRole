@@ -3,65 +3,112 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from autorole.context import FormIntelligenceResult, JobApplicationContext, PackagedResume
+from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext, PackagedResume
+from autorole.integrations.form_controls.models import (
+	DetectionResult,
+	ExtractedField,
+	FieldOutcome,
+	FillInstruction,
+)
 from autorole.stages.form_submission import FormSubmissionStage
 from tests.conftest import SAMPLE_LISTING
 
 try:
 	from pipeline.types import Message
 except Exception:
-	class Message:  # pragma: no cover - fallback when pipeline package is unavailable
+	class Message:  # pragma: no cover
 		def __init__(self, run_id: str, payload: dict[str, Any], metadata: dict[str, Any] | None = None) -> None:
 			self.run_id = run_id
 			self.payload = payload
 			self.metadata = metadata or {}
 
 
+class MockLocator:
+	def __init__(self, visible: bool = True) -> None:
+		self._visible = visible
+		self.files: list[str] = []
+
+	@property
+	def first(self) -> "MockLocator":
+		return self
+
+	async def count(self) -> int:
+		return 1 if self._visible else 0
+
+	async def is_visible(self) -> bool:
+		return self._visible
+
+	async def set_input_files(self, value: str) -> None:
+		self.files.append(value)
+
+	async def all_text_contents(self) -> list[str]:
+		return []
+
+	async def inner_text(self) -> str:
+		return "Application submitted"
+
+
 class MockPage:
-	def __init__(self, content_text: str = "") -> None:
-		self._content_text = content_text
-		self.fill_calls: list[tuple[str, str]] = []
-		self.select_calls: list[tuple[str, str]] = []
-		self.check_calls: list[str] = []
-		self.uncheck_calls: list[str] = []
+	def __init__(self, submit_visible: bool = True) -> None:
+		self.submit_visible = submit_visible
 		self.click_calls: list[str] = []
-		self.file_calls: list[tuple[str, str]] = []
-		self.raise_on_fill = False
-		self.raise_on_attach = False
-		self.raise_on_click = False
+		self.screenshots: list[str] = []
+		self.file_locator = MockLocator(visible=True)
 
-	async def fill(self, selector: str, value: str) -> None:
-		if self.raise_on_fill:
-			raise TimeoutError("fill timeout")
-		self.fill_calls.append((selector, value))
-
-	async def select_option(self, selector: str, value: str) -> None:
-		self.select_calls.append((selector, value))
-
-	async def check(self, selector: str) -> None:
-		self.check_calls.append(selector)
-
-	async def uncheck(self, selector: str) -> None:
-		self.uncheck_calls.append(selector)
+	def locator(self, selector: str) -> MockLocator:
+		if "file" in selector:
+			return self.file_locator
+		if "submit" in selector:
+			return MockLocator(visible=self.submit_visible)
+		return MockLocator(visible=True)
 
 	async def click(self, selector: str) -> None:
-		if self.raise_on_click:
-			raise TimeoutError("submit timeout")
 		self.click_calls.append(selector)
-
-	async def set_input_files(self, selector: str, path: str) -> None:
-		if self.raise_on_attach:
-			raise TimeoutError("attach timeout")
-		self.file_calls.append((selector, path))
-
-	async def content(self) -> str:
-		return self._content_text
 
 	async def wait_for_load_state(self, _state: str) -> None:
 		return None
 
+	async def wait_for_timeout(self, _ms: int) -> None:
+		return None
+
+	async def screenshot(self, path: str) -> None:
+		self.screenshots.append(path)
+
+	async def content(self) -> str:
+		return "thank you"
+
+
+class StubExecutor:
+	def __init__(self, outcomes: list[FieldOutcome]) -> None:
+		self.outcomes = outcomes
+		self.calls = 0
+
+	async def execute_page(self, _page: Any, _fields: Any, _instructions: Any) -> list[FieldOutcome]:
+		self.calls += 1
+		return self.outcomes
+
 
 def _ctx() -> JobApplicationContext:
+	field = ExtractedField(
+		id="field-1",
+		run_id="acme_123",
+		page_index=0,
+		page_label="Application form",
+		field_type="text",
+		selector="[name='email']",
+		label="Email",
+		required=True,
+		options=[],
+		prefilled_value="",
+	)
+	inst = FillInstruction(
+		field_id="field-1",
+		run_id="acme_123",
+		action="fill",
+		value="me@example.com",
+		source="generated",
+		page_index=0,
+	)
 	return JobApplicationContext(
 		run_id="acme_123",
 		listing=SAMPLE_LISTING,
@@ -70,82 +117,76 @@ def _ctx() -> JobApplicationContext:
 			pdf_path="/tmp/resume.pdf",
 			packaged_at=datetime.now(timezone.utc),
 		),
+		form_session=FormSession(
+			detection=DetectionResult(
+				run_id="acme_123",
+				platform_id="generic",
+				apply_url="https://example.com/apply",
+				used_iframe=False,
+				detection_method="fallback",
+			),
+			page_index=0,
+		),
 		form_intelligence=FormIntelligenceResult(
-			questionnaire=[],
-			form_json_filled={
-				"fields": [
-					{"id": "email", "type": "text", "value": "me@example.com"},
-					{"id": "country", "type": "single_choice", "value": "US"},
-					{"id": "auth", "type": "multiple_choice", "value": ["US Citizen"]},
-				]
-			},
+			page_index=0,
+			page_label="Application form",
+			extracted_fields=[field],
+			fill_instructions=[inst],
 			generated_at=datetime.now(timezone.utc),
 		),
 	)
 
 
-async def test_form_submission_fills_all_fields(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	stage = FormSubmissionStage(test_config, page)
-
-	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
-
-	assert result.success
-	assert any("email" in call[0] for call in page.fill_calls)
-	assert any("country" in call[0] for call in page.select_calls)
-	assert any("auth" in selector for selector in page.check_calls)
-
-
-async def test_form_submission_attaches_pdf(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	stage = FormSubmissionStage(test_config, page)
-
-	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
-
-	assert result.success
-	assert page.file_calls == [("input[type='file']", "/tmp/resume.pdf")]
-
-
-async def test_form_submission_marks_submitted_when_confirmed(test_config: Any) -> None:
-	page = MockPage(content_text="Thank you, your application submitted")
-	stage = FormSubmissionStage(test_config, page)
+async def test_form_submission_increments_page_index(test_config: Any) -> None:
+	page = MockPage(submit_visible=False)
+	executor = StubExecutor(
+		[
+			FieldOutcome(
+				field_id="field-1",
+				action_taken="fill",
+				value_used="me@example.com",
+				status="ok",
+				error_message=None,
+			)
+		]
+	)
+	stage = FormSubmissionStage(test_config, page, executor=executor)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
 
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.form_session is not None
+	assert out_ctx.form_session.page_index == 1
 	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_confirmed is True
-	assert out_ctx.applied.submission_status == "submitted"
 
 
-async def test_form_submission_marks_unconfirmed_without_confirmation_text(test_config: Any) -> None:
-	page = MockPage(content_text="Your form has been sent for processing")
-	stage = FormSubmissionStage(test_config, page)
+async def test_form_submission_sets_applied_only_on_submit(test_config: Any) -> None:
+	page = MockPage(submit_visible=False)
+	executor = StubExecutor([])
+	stage = FormSubmissionStage(test_config, page, executor=executor)
+	ctx = _ctx().model_copy(
+		update={
+			"form_session": _ctx().form_session.model_copy(
+				update={
+					"detection": _ctx().form_session.detection.model_copy(update={"platform_id": "workday"})
+				}
+			)
+		}
+	)
 
-	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
+	result = await stage.execute(Message(run_id="acme_123", payload=ctx.model_dump()))
 
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
-	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_confirmed is False
-	assert out_ctx.applied.submission_status == "unconfirmed"
+	assert out_ctx.form_session is not None
+	assert out_ctx.form_session.last_advance_action == "next_page"
+	assert out_ctx.applied is None
 
 
-async def test_form_submission_fails_on_playwright_error(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	page.raise_on_fill = True
-	stage = FormSubmissionStage(test_config, page)
-
-	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
-
-	assert not result.success
-	assert result.error_type == "TimeoutError"
-
-
-async def test_form_submission_fails_when_preconditions_not_met(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	stage = FormSubmissionStage(test_config, page)
+async def test_form_submission_fails_without_preconditions(test_config: Any) -> None:
+	page = MockPage()
+	stage = FormSubmissionStage(test_config, page, executor=StubExecutor([]))
 	ctx = JobApplicationContext(run_id="acme_123")
 
 	result = await stage.execute(Message(run_id="acme_123", payload=ctx.model_dump()))
@@ -154,9 +195,9 @@ async def test_form_submission_fails_when_preconditions_not_met(test_config: Any
 	assert result.error_type == "PreconditionError"
 
 
-async def test_form_submission_apply_dryrun_skips_submit_click(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	stage = FormSubmissionStage(test_config, page)
+async def test_form_submission_dryrun_forces_next_page_action(test_config: Any) -> None:
+	page = MockPage()
+	stage = FormSubmissionStage(test_config, page, executor=StubExecutor([]))
 
 	result = await stage.execute(
 		Message(
@@ -168,46 +209,6 @@ async def test_form_submission_apply_dryrun_skips_submit_click(test_config: Any)
 
 	assert result.success
 	out_ctx = JobApplicationContext.model_validate(result.output)
-	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
-	assert out_ctx.applied.submission_confirmed is False
-	assert not page.click_calls, "Expected submit click to be skipped in dry-run"
-
-
-async def test_form_submission_apply_dryrun_tolerates_attach_failure(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	page.raise_on_attach = True
-	stage = FormSubmissionStage(test_config, page)
-
-	result = await stage.execute(
-		Message(
-			run_id="acme_123",
-			payload=_ctx().model_dump(),
-			metadata={"dryrun_stop_after_submit": True},
-		)
-	)
-
-	assert result.success
-	out_ctx = JobApplicationContext.model_validate(result.output)
-	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
-
-
-async def test_form_submission_apply_dryrun_ignores_submit_click_failure(test_config: Any) -> None:
-	page = MockPage(content_text="application submitted")
-	page.raise_on_click = True
-	stage = FormSubmissionStage(test_config, page)
-
-	result = await stage.execute(
-		Message(
-			run_id="acme_123",
-			payload=_ctx().model_dump(),
-			metadata={"dryrun_stop_after_submit": True},
-		)
-	)
-
-	assert result.success
-	out_ctx = JobApplicationContext.model_validate(result.output)
-	assert out_ctx.applied is not None
-	assert out_ctx.applied.submission_status == "dryrun_submit_skipped"
-	assert not page.click_calls, "Submit should not be attempted in dry-run"
+	assert out_ctx.form_session is not None
+	assert out_ctx.form_session.last_advance_action == "done"
+	assert out_ctx.form_session.page_index == 0

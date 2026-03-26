@@ -15,6 +15,7 @@ from autorole.config import AppConfig
 from autorole.context import JobApplicationContext
 from autorole.db.repository import JobRepository
 from autorole.gates.best_fit import BestFitGate
+from autorole.gates.form_page import FormPageGate
 from autorole.integrations.credentials import CredentialStore
 from autorole.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
 from autorole.integrations.renderer import PandocRenderer, WeasyPrintRenderer
@@ -285,7 +286,7 @@ class JobApplicationPipeline:
 						print(f"Exploring found {len(contexts)} listing(s); processing {len(selected)}")
 
 					for listing_ctx in selected:
-						await self._run_listing(
+						succeeded = await self._run_listing(
 							ctx=listing_ctx,
 							executors=executors,
 							gate=gate,
@@ -293,9 +294,14 @@ class JobApplicationPipeline:
 							artifacts_root=stage_outputs_root,
 							start_stage=start_stage,
 						)
+						if not succeeded:
+							print(f"[block] run_id={listing_ctx.run_id} halted due to stage failure")
+							await browser_context.close()
+							await browser.close()
+							return 1
 
-					# print("All selected listings processed. Wai for confirm for 30s")
-					# await asyncio.sleep(30)
+					print("All selected listings processed. Wait for confirming for 30s")
+					await asyncio.sleep(30)
 
 					await browser_context.close()
 					await browser.close()
@@ -322,7 +328,7 @@ class JobApplicationPipeline:
 		logger: logging.Logger,
 		artifacts_root: Path,
 		start_stage: str,
-	) -> None:
+	) -> bool:
 		if self._repo is None:
 			raise RuntimeError("JobRepository is not initialized")
 
@@ -366,10 +372,10 @@ class JobApplicationPipeline:
 			while True:
 				ctx = await executors["scoring"].run(ctx, attempt=attempt, metadata=metadata)
 				if ctx is None:
-					return
+					return False
 				ctx = await executors["tailoring"].run(ctx, attempt=attempt, metadata=metadata)
 				if ctx is None:
-					return
+					return False
 
 				gate_result = gate.evaluate(
 					SimpleNamespace(output=ctx.model_dump()),
@@ -385,7 +391,7 @@ class JobApplicationPipeline:
 				if decision == "block":
 					logger.warning("best_fit block run_id=%s reason=%s", ctx.run_id, gate_result.reason)
 					print(f"[block] best_fit -> {gate_result.reason}")
-					return
+					return False
 
 				print("[ok] best_fit -> pass")
 				break
@@ -394,26 +400,69 @@ class JobApplicationPipeline:
 
 		if mode == "observe":
 			print("[stop] observe mode enabled; skipping packaging, session, and submission stages")
-			return
+			return True
 
-		for stage_name in ["packaging", "session", "form_intelligence", "form_submission"]:
+		for stage_name in ["packaging", "session"]:
 			ex = executors[stage_name]
-			if ex.should_run(start_stage):
-				ctx = await ex.run(ctx)
-				if ctx is None:
-					return
-			else:
+			if not ex.should_run(start_stage):
 				print(f"[resume] skipping {stage_name} (start stage: {start_stage})")
+				continue
+			ctx = await ex.run(ctx)
+			if ctx is None:
+				return False
+
+		# --- Form filling loop ---
+		if executors["form_intelligence"].should_run(start_stage):
+			while True:
+				ctx = await executors["form_intelligence"].run(ctx)
+				if ctx is None:
+					return False
+
+				ctx = await executors["form_submission"].run(ctx)
+				if ctx is None:
+					return False
+
+				if self._rc.mode == "apply-dryrun":
+					print("[stop] apply-dryrun mode; stopping after first form page fill")
+					return True
+
+				gate_result = executors["form_page_gate"].evaluate(
+					SimpleNamespace(output=ctx.model_dump()),
+					Message(run_id=ctx.run_id, payload={}, metadata={}, attempt=1),
+				)
+				decision = getattr(gate_result.decision, "value", str(gate_result.decision))
+
+				if decision == "loop":
+					print(f"[loop] form_page_gate -> {gate_result.reason}")
+					continue
+				if decision == "block":
+					print(f"[block] form_page_gate -> {gate_result.reason}")
+					_emit_resume_hint(logger, ctx.run_id, self._rc.mode, "form_intelligence")
+					return False
+
+				print("[ok] form_page_gate -> submitted")
+				break
+		elif executors["form_submission"].should_run(start_stage):
+			if ctx.form_intelligence is None or ctx.form_session is None:
+				print("[compat] hydrating form context via form_intelligence before form_submission resume")
+				ctx = await executors["form_intelligence"].run(ctx)
+				if ctx is None:
+					return False
+			ctx = await executors["form_submission"].run(ctx)
+			if ctx is None:
+				return False
+		else:
+			print(f"[resume] skipping form loop (start stage: {start_stage})")
 
 		if mode == "apply-dryrun":
 			print("[stop] apply-dryrun mode enabled; completed flow with submit click skipped")
-			return
+			return True
 
 		ex = executors["concluding"]
 		if ex.should_run(start_stage):
 			ctx = await ex.run(ctx)
 			if ctx is None:
-				return
+				return False
 		else:
 			print(f"[resume] skipping concluding (start stage: {start_stage})")
 
@@ -421,6 +470,7 @@ class JobApplicationPipeline:
 			f"[done] run_id={ctx.run_id} score={ctx.score.overall_score:.3f} "
 			f"tailoring_degree={ctx.tailored.tailoring_degree}"
 		)
+		return True
 
 	def _build_executors(
 		self,
@@ -445,11 +495,12 @@ class JobApplicationPipeline:
 					cfg,
 					llm_client,
 					form_page,
-					use_random_questionnaire_answers=mode in {"observe", "apply-dryrun"},
+					use_random_questionnaire_answers=mode in {"observe"},
 				),
 				*args,
 			),
 			"form_submission": FormSubmissionExecutor(FormSubmissionStage(cfg, form_page), *args),
+			"form_page_gate": FormPageGate(),
 			"concluding": ConcludingExecutor(ConcludingStage(cfg, repo), *args),
 		}
 

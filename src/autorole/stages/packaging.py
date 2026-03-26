@@ -90,27 +90,6 @@ class PackagingExecutor(AutoRoleStage):
 		)
 
 	async def on_failure(self, ctx: JobApplicationContext, result: Any, attempt: int) -> JobApplicationContext | None:
-		_ = attempt
-		if self._mode == "apply-dryrun" and ctx.tailored is not None:
-			fallback = PackagedResume(
-				resume_id=ctx.tailored.resume_id,
-				pdf_path=ctx.tailored.file_path,
-				packaged_at=datetime.now(timezone.utc),
-			)
-			self._write_artifact(
-				"error.txt",
-				(
-					f"error_type={getattr(result, 'error_type', '')}\n"
-					f"error={result.error}\n"
-					"fallback=tailored_markdown\n"
-				),
-				ctx.run_id,
-			)
-			print(
-				f"[warn] packaging failed in apply-dryrun mode; {result.error} "
-				"falling back to tailored markdown for upload"
-			)
-			return ctx.model_copy(update={"packaged": fallback})
 		return await super().on_failure(ctx, result, attempt)
 
 	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:

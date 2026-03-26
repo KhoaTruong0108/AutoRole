@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from autorole.config import AppConfig
 from autorole.context import ApplicationResult, JobApplicationContext
-from autorole.integrations.form_controls import AsyncDOMFormApplier, FormApplier
+from autorole.integrations.form_controls.adapters import get_adapter
+from autorole.integrations.form_controls.executor import FormExecutor, _build_audit_log, _write_audit_log
+from autorole.integrations.form_controls.models import ExecutionResult
 from autorole.stage_base import AutoRoleStage
 
 try:
@@ -49,199 +52,133 @@ class FormSubmissionStage(Stage):
 	name = "form_submission"
 	concurrency = 1
 
-	def __init__(self, config: AppConfig, page: Any, form_applier: FormApplier | None = None) -> None:
+	def __init__(self, config: AppConfig, page: Any, executor: FormExecutor | None = None) -> None:
 		self._config = config
 		self._page = page
-		self._form_applier = form_applier or AsyncDOMFormApplier()
+		self._executor = executor or FormExecutor()
 
 	async def execute(self, message: Message) -> StageResult:
 		_ = self._config
 		ctx = JobApplicationContext.model_validate(message.payload)
 		metadata = getattr(message, "metadata", {}) or {}
-		# Backward-compatible flag: dryrun_stop_after_submit now means skip submit click.
-		dryrun_skip_submit = bool(
-			metadata.get("dryrun_skip_submit", metadata.get("dryrun_stop_after_submit", False))
-		)
-		if ctx.listing is None or ctx.form_intelligence is None or ctx.packaged is None:
+		dryrun_skip_submit = bool(metadata.get("dryrun_stop_after_submit", False))
+
+		if (
+			ctx.listing is None
+			or ctx.form_intelligence is None
+			or ctx.form_session is None
+			or ctx.packaged is None
+		):
 			return StageResult.fail(
-				"FormSubmissionStage: listing, form_intelligence and packaged must be set",
+				"FormSubmissionStage: listing, form_intelligence, form_session and packaged must be set",
 				"PreconditionError",
 			)
 
-		if hasattr(self._page, "goto"):
-			apply_url = ctx.listing.apply_url or ctx.listing.job_url
-			try:
-				await self._page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
-			except Exception as exc:
-				return StageResult.fail(f"Navigation failed: {exc}", "NavigationError")
+		fields = ctx.form_intelligence.extracted_fields
+		instructions = ctx.form_intelligence.fill_instructions
+		page_index = ctx.form_intelligence.page_index
+		platform_id = ctx.form_session.detection.platform_id
+		adapter = get_adapter(platform_id)
 
-		try:
-			await self._form_applier.fill(self._page, ctx.form_intelligence.form_json_filled)
-			fill_report = await _build_fill_report(self._page, ctx.form_intelligence.form_json_filled)
-			try:
-				await self._form_applier.attach_resume(self._page, ctx.packaged.pdf_path)
-				fill_report["resume_attachment"] = {
-					"expected_path": ctx.packaged.pdf_path,
-					"status": "attached",
-				}
-			except Exception:
-				fill_report["resume_attachment"] = {
-					"expected_path": ctx.packaged.pdf_path,
-					"status": "failed" if not dryrun_skip_submit else "skipped_dryrun",
-				}
-				if not dryrun_skip_submit:
-					raise
-			confirmed = False
-			submission_status = "dryrun_submit_skipped" if dryrun_skip_submit else "submitted"
+		outcomes = await self._executor.execute_page(self._page, fields, instructions)
+		failed_outcomes = [
+			outcome
+			for outcome in outcomes
+			if outcome.status in {"fill_error", "selector_not_found"}
+		]
 
-			if not dryrun_skip_submit:
-				await self._form_applier.submit(self._page)
-				confirmed = await self._form_applier.confirm(self._page)
-				submission_status = "submitted" if confirmed else "unconfirmed"
-		except Exception as exc:
-			return StageResult.fail(f"Submission failed: {exc}", type(exc).__name__)
+		file_input = await adapter.get_file_input(self._page)
+		if file_input is not None and not dryrun_skip_submit:
+			await file_input.set_input_files(str(ctx.packaged.pdf_path))
+			if hasattr(self._page, "wait_for_timeout"):
+				await self._page.wait_for_timeout(500)
 
-		applied = ApplicationResult(
-			resume_id=ctx.packaged.resume_id,
-			questionnaire=ctx.form_intelligence.questionnaire,
-			form_json=ctx.form_intelligence.form_json_filled,
-			fill_report=fill_report,
-			submission_status=submission_status,
-			submission_confirmed=confirmed,
-			applied_at=datetime.now(timezone.utc),
-		)
-		return StageResult.ok(ctx.model_copy(update={"applied": applied}))
+		artifacts_dir = Path("logs") / ctx.run_id
+		artifacts_dir.mkdir(parents=True, exist_ok=True)
+		page_section_label = (ctx.form_intelligence.page_label or f"page_{page_index}").replace(" ", "_")[:40]
+		screenshot_path = str(artifacts_dir / f"page_{page_index}_{page_section_label}.png")
+		if hasattr(self._page, "screenshot"):
+			await self._page.screenshot(path=screenshot_path)
 
+		if failed_outcomes:
+			failed_ids = ", ".join(outcome.field_id for outcome in failed_outcomes)
+			return StageResult.fail(
+				f"Current page fill failed; refusing to advance. failing_field_ids=[{failed_ids}]",
+				"PageFillError",
+			)
 
-async def _build_fill_report(page: Any, form_json_filled: dict[str, Any]) -> dict[str, Any]:
-	fields_report: list[dict[str, Any]] = []
-	for field in form_json_filled.get("fields", []):
-		field_id = str(field.get("id") or "").strip()
-		field_type = str(field.get("type") or "text")
-		expected = field.get("value")
-		entry = {
-			"id": field_id,
-			"label": field.get("label") or field_id,
-			"type": field_type,
-			"expected": expected,
-			"actual": None,
-			"status": "unknown",
-			"error": "",
-		}
+		action = "done" if dryrun_skip_submit else await adapter.advance(self._page)
+		applied = None
 
-		if not field_id:
-			entry["status"] = "mismatched"
-			entry["error"] = "missing_field_id"
-			fields_report.append(entry)
-			continue
+		if action == "submit":
+			post_submit = str(artifacts_dir / "post_submit.png")
+			if hasattr(self._page, "screenshot"):
+				await self._page.screenshot(path=post_submit)
+			success = await adapter.confirm_success(self._page)
+			if not success:
+				errors: list[str] = []
+				if hasattr(self._page, "locator"):
+					try:
+						errors = await self._page.locator('[class*="error"], [role="alert"]').all_text_contents()
+					except Exception:
+						errors = []
+				return StageResult.fail(
+					f"Submission not confirmed. Page errors: {errors}",
+					"SubmissionError",
+				)
 
-		if not hasattr(page, "locator"):
-			entry["error"] = "page_has_no_locator"
-			fields_report.append(entry)
-			continue
+			confirmation_text = ""
+			if hasattr(self._page, "locator"):
+				try:
+					confirmation_text = (await self._page.locator("body").inner_text())[:500]
+				except Exception:
+					confirmation_text = ""
 
-		selector = _name_or_id_selector(field_id)
-		try:
-			actual = await _read_field_value(page, selector, field_type)
-			entry["actual"] = actual
-			entry["status"] = "matched" if _values_match(expected, actual) else "mismatched"
-		except Exception as exc:
-			entry["error"] = str(exc)
-		fields_report.append(entry)
+			all_outcomes = ctx.form_session.all_outcomes + outcomes
+			execution_result = ExecutionResult(
+				run_id=ctx.run_id,
+				success=True,
+				platform_id=platform_id,
+				apply_url=ctx.form_session.detection.apply_url,
+				submitted_at=datetime.now(timezone.utc).isoformat(),
+				confirmation_text=confirmation_text,
+				field_outcomes=all_outcomes,
+				screenshot_pre=screenshot_path,
+				screenshot_post=post_submit,
+				error=None,
+			)
 
-	total = len(fields_report)
-	matched = sum(1 for item in fields_report if item["status"] == "matched")
-	mismatched = sum(1 for item in fields_report if item["status"] == "mismatched")
-	unknown = total - matched - mismatched
+			audit = _build_audit_log(
+				run_id=ctx.run_id,
+				started_at=ctx.started_at.isoformat(),
+				job_url=ctx.listing.job_url,
+				detection=ctx.form_session.detection,
+				all_fields=ctx.form_session.all_fields + fields,
+				all_instructions=ctx.form_session.all_instructions + instructions,
+				all_outcomes=all_outcomes,
+				result=execution_result,
+			)
+			audit_log_path = _write_audit_log(audit, ctx.run_id)
 
-	return {
-		"summary": {
-			"total_fields": total,
-			"matched": matched,
-			"mismatched": mismatched,
-			"unknown": unknown,
-		},
-		"fields": fields_report,
-	}
+			applied = ApplicationResult(
+				resume_id=ctx.packaged.resume_id,
+				execution_result=execution_result,
+				audit_log_path=audit_log_path,
+				applied_at=datetime.now(timezone.utc),
+				submission_status="submitted",
+				submission_confirmed=True,
+			)
 
+		session = ctx.form_session
+		session.all_outcomes.extend(outcomes)
+		session.screenshots.append(screenshot_path)
+		session.last_advance_action = action
+		if action in {"next_page", "submit"}:
+			session.page_index += 1
 
-def _name_or_id_selector(field_id: str) -> str:
-	return f"[name='{field_id}'], [id='{field_id}']"
-
-
-async def _read_field_value(page: Any, selector: str, field_type: str) -> Any:
-	locator = page.locator(selector)
-	count = await locator.count()
-	if count == 0:
-		raise RuntimeError("field_not_found")
-
-	entries = await locator.evaluate_all(
-		"""
-		els => els.map(el => {
-		  const tag = (el.tagName || '').toLowerCase();
-		  const typ = ((el.type || '') + '').toLowerCase();
-		  if (tag === 'select') {
-		    const selected = Array.from(el.selectedOptions || []).map(o => o.value || o.textContent || '');
-		    return { tag, type: 'select', value: selected.length <= 1 ? (selected[0] || '') : selected, checked: null };
-		  }
-		  if (typ === 'checkbox' || typ === 'radio') {
-		    return { tag, type: typ, value: el.value || '', checked: !!el.checked };
-		  }
-		  return { tag, type: typ || tag, value: el.value || '', checked: null };
-		})
-		"""
-	)
-
-	if field_type == "multiple_choice":
-		selected = [str(item.get("value") or "") for item in entries if item.get("checked")]
-		return [value for value in selected if value]
-
-	if field_type == "checkbox":
-		return any(bool(item.get("checked")) for item in entries)
-
-	if field_type in {"radio", "single_choice"}:
-		for item in entries:
-			if item.get("checked"):
-				return str(item.get("value") or "")
-		for item in entries:
-			value = item.get("value")
-			if isinstance(value, list) and value:
-				return str(value[0])
-			if isinstance(value, str) and value:
-				return value
-		return ""
-
-	value = entries[0].get("value")
-	if isinstance(value, list):
-		return value[0] if value else ""
-	return str(value or "")
-
-
-def _values_match(expected: Any, actual: Any) -> bool:
-	if isinstance(expected, list):
-		expected_norm = sorted(str(v).strip() for v in expected)
-		actual_values = actual if isinstance(actual, list) else ([] if actual is None else [actual])
-		actual_norm = sorted(str(v).strip() for v in actual_values)
-		return expected_norm == actual_norm
-	if isinstance(expected, bool):
-		return bool(actual) == expected
-	return str(expected or "").strip() == str(actual or "").strip()
-
-
-async def _fill_form(page: Any, form_json_filled: dict[str, Any]) -> None:
-	await AsyncDOMFormApplier().fill(page, form_json_filled)
-
-
-async def _attach_resume(page: Any, pdf_path: str) -> None:
-	await AsyncDOMFormApplier().attach_resume(page, pdf_path)
-
-
-async def _submit_form(page: Any) -> None:
-	await AsyncDOMFormApplier().submit(page)
-
-
-async def _confirm_submission(page: Any) -> bool:
-	return await AsyncDOMFormApplier().confirm(page)
+		if action == "submit":
+			return StageResult.ok(ctx.model_copy(update={"form_session": session, "applied": applied}))
+		return StageResult.ok(ctx.model_copy(update={"form_session": session}))
 
 
 class FormSubmissionExecutor(AutoRoleStage):
@@ -259,24 +196,26 @@ class FormSubmissionExecutor(AutoRoleStage):
 
 	async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
 		_ = attempt
-		if ctx.applied is None:
+		session = ctx.form_session
+		if session is None:
 			return
 		self._write_artifact(
-			"output.json",
-			json.dumps(ctx.applied.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+			f"page_{session.page_index - 1}_outcomes.json",
+			json.dumps([item.model_dump(mode="json") for item in session.all_outcomes], indent=2) + "\n",
 			ctx.run_id,
 		)
-		self._write_artifact(
-			"field_fill_report.json",
-			json.dumps(ctx.applied.fill_report, indent=2, ensure_ascii=False) + "\n",
-			ctx.run_id,
-		)
+		if ctx.applied is not None and ctx.applied.execution_result is not None:
+			self._write_artifact(
+				"execution_result.json",
+				json.dumps(ctx.applied.execution_result.model_dump(mode="json"), indent=2) + "\n",
+				ctx.run_id,
+			)
 
 	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
 		_ = attempt
-		if ctx.applied is None:
+		session = ctx.form_session
+		if session is None:
 			return
-		print(
-			"[ok] form_submission -> "
-			f"status={ctx.applied.submission_status} confirmed={ctx.applied.submission_confirmed}"
-		)
+		action = session.last_advance_action
+		page = session.page_index - 1
+		print(f"[ok] form_submission -> page={page} advance={action}")

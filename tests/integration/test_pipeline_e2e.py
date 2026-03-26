@@ -16,7 +16,7 @@ from autorole.integrations.credentials import CredentialStore
 from autorole.pipeline import inject_loop_metadata_from_gate_reason
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage
-from autorole.stages.form_intelligence import FormIntelligenceStage, QuestionnaireAnswers
+from autorole.stages.form_intelligence import FormIntelligenceStage
 from autorole.stages.form_submission import FormSubmissionStage
 from autorole.stages.packaging import PackagingStage
 from autorole.stages.scoring import CriterionDetail, CriterionScores, JDBreakdown, ScoringStage
@@ -68,8 +68,55 @@ class MockFormPage:
 		self.check_calls: list[str] = []
 		self.file_calls: list[tuple[str, str]] = []
 
+	class _Locator:
+		def __init__(self, page: "MockFormPage", selector: str) -> None:
+			self._page = page
+			self._selector = selector
+			self._value = ""
+
+		@property
+		def first(self) -> "MockFormPage._Locator":
+			return self
+
+		async def count(self) -> int:
+			return 1
+
+		async def wait_for(self, **_kwargs: Any) -> None:
+			return None
+
+		async def fill(self, value: str) -> None:
+			self._value = value
+
+		async def type(self, value: str, delay: int = 0) -> None:
+			_ = delay
+			self._value = value
+
+		async def dispatch_event(self, _name: str) -> None:
+			return None
+
+		async def select_option(self, label: str) -> None:
+			self._value = label
+
+		async def click(self) -> None:
+			return None
+
+		async def check(self) -> None:
+			return None
+
+		async def set_input_files(self, path: str) -> None:
+			self._page.file_calls.append((self._selector, path))
+
+		async def all_text_contents(self) -> list[str]:
+			return []
+
+		async def inner_text(self) -> str:
+			return "Application submitted"
+
 	async def goto(self, _url: str, **_kwargs: Any) -> None:
 		return None
+
+	def locator(self, selector: str) -> "MockFormPage._Locator":
+		return MockFormPage._Locator(self, selector)
 
 	async def content(self) -> str:
 		return self.confirm_text
@@ -137,17 +184,29 @@ class MockLLMClient:
 					for k, v in scores.items()
 				},
 			)
-		if response_model is QuestionnaireAnswers:
-			return QuestionnaireAnswers(
-				answers=[
-					{"map": "direct:email:value", "answer": "me@example.com"},
-					{"map": "direct:country:choice", "answer": "US"},
-				],
-				unanswered_required=[],
-			)
 		if response_model is None:
 			return "# Tailored Resume\n\n- Added aligned content\n"
 		raise AssertionError("Unexpected response_model")
+
+
+class StubExtractor:
+	async def extract(self, _section: Any, run_id: str, page_index: int) -> list[Any]:
+		from autorole.integrations.form_controls.models import ExtractedField
+
+		return [
+			ExtractedField(
+				id=f"{run_id}-email-{page_index}",
+				run_id=run_id,
+				page_index=page_index,
+				page_label="Application form",
+				field_type="text",
+				selector="[name='email']",
+				label="Email",
+				required=True,
+				options=[],
+				prefilled_value="",
+			),
+		]
 
 
 @pytest.mark.asyncio
@@ -164,6 +223,7 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 		db_path=str(base_dir / "pipeline.db"),
 		master_resume=str(master_resume),
 	)
+	(base_dir / "user_profile.json").write_text("{}", encoding="utf-8")
 
 	async with aiosqlite.connect(":memory:") as db:
 		with open("src/autorole/db/migrations/001_domain.sql", encoding="utf-8") as f:
@@ -180,19 +240,15 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 		gate = BestFitGate(max_attempts=2)
 		packaging = PackagingStage(config, MockRenderer())
 		session = SessionStage(config, CredentialStore())
-		form_intel = FormIntelligenceStage(config, llm, form_page)
+		form_intel = FormIntelligenceStage(
+			config,
+			llm,
+			form_page,
+			form_extractor=StubExtractor(),
+			use_random_questionnaire_answers=True,
+		)
 		form_submit = FormSubmissionStage(config, form_page)
 		concluding = ConcludingStage(config, repo)
-
-		async def fake_extract(_page: Any) -> dict[str, Any]:
-			return {
-				"fields": [
-					{"id": "email", "label": "Email", "type": "text", "required": True, "options": [], "value": ""},
-					{"id": "country", "label": "Country", "type": "single_choice", "required": True, "options": ["US", "CA"], "value": ""},
-				]
-			}
-
-		monkeypatch.setattr("autorole.stages.form_intelligence._extract_form_fields", fake_extract)
 
 		seed = Message(run_id="seed", payload={"search_config": {"platforms": ["greenhouse"]}})
 		explore_result = await exploring.execute(seed)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -9,11 +8,16 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from autorole.config import AppConfig
-from autorole.context import FormIntelligenceResult, JobApplicationContext
-from autorole.integrations.form_controls import AsyncDOMFormExtractor, FormExtractor
+from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext
+from autorole.integrations.form_controls.adapters import get_adapter
+from autorole.integrations.form_controls.adapters.base import PageSection
+from autorole.integrations.form_controls.detector import detect
+from autorole.integrations.form_controls.exceptions import MappingError
+from autorole.integrations.form_controls.extractor import SemanticFieldExtractor
+from autorole.integrations.form_controls.mapper import AIFieldMapper
+from autorole.integrations.form_controls.models import ExtractedField, FillInstruction
+from autorole.integrations.form_controls.profile import load_profile
 from autorole.integrations.llm import LLMClient
-from autorole.integrations.scrapers import get_scraper
-from autorole.integrations.scrapers.models import ApplicationForm
 from autorole.stage_base import AutoRoleStage
 
 try:
@@ -80,15 +84,16 @@ class FormIntelligenceStage(Stage):
 		llm_client: LLMClient,
 		page: Any,
 		captcha_solver: CaptchaSolver | None = None,
-		form_extractor: FormExtractor | None = None,
+		form_extractor: Any | None = None,
+		field_mapper: Any | None = None,
 		use_random_questionnaire_answers: bool = False,
 	) -> None:
 		self._config = config
 		self._llm = llm_client
 		self._page = page
 		self._captcha_solver = captcha_solver
-		self._has_custom_form_extractor = form_extractor is not None
-		self._form_extractor = form_extractor or AsyncDOMFormExtractor()
+		self._extractor = form_extractor or SemanticFieldExtractor(page)
+		self._mapper = field_mapper or AIFieldMapper(llm_client)
 		self._use_random_questionnaire_answers = use_random_questionnaire_answers
 
 	async def execute(self, message: Message) -> StageResult:
@@ -99,27 +104,27 @@ class FormIntelligenceStage(Stage):
 				"PreconditionError",
 			)
 
-		# Prefer ATS-native form extraction when available, then fall back to generic DOM extraction.
-		form_json_raw: dict[str, Any] | None = None
-		apply_url = ctx.listing.apply_url or ctx.listing.job_url
-		try:
-			scraper = get_scraper(ctx.listing.job_url, page=self._page)
-			application_form = await scraper.fetch_application_form(apply_url)
-			form_json_raw = _application_form_to_form_json(application_form)
-			if not form_json_raw.get("fields"):
-				form_json_raw = None
-		except Exception:
-			form_json_raw = None
+		profile_path = Path(self._config.base_dir).expanduser() / "user_profile.json"
+		if not profile_path.exists():
+			return StageResult.fail("user_profile.json not found", "ConfigError")
 
-		if form_json_raw is None:
-			await _apply_session_cookies(self._page, ctx)
+		try:
+			profile = load_profile(profile_path)
+		except Exception as exc:
+			return StageResult.fail(f"Failed to load user profile: {exc}", "ConfigError")
+
+		apply_url = ctx.listing.apply_url or ctx.listing.job_url
+
+		form_session = ctx.form_session
+		if form_session is None:
 			try:
 				await self._page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
 			except Exception as exc:
 				return StageResult.fail(f"Navigation failed: {exc}", "NavigationError")
 
 			for attempt in range(MAX_CAPTCHA_ATTEMPTS + 1):
-				captcha = await _detect_captcha(self._page)
+				captcha = None #await _detect_captcha(self._page)
+				# print(f"[debug] CAPTCHA detection attempt {attempt}: {captcha}")
 				if not captcha:
 					break
 				if self._captcha_solver is None or attempt == MAX_CAPTCHA_ATTEMPTS:
@@ -134,221 +139,162 @@ class FormIntelligenceStage(Stage):
 				if not solved:
 					continue
 
+			detection = await detect(self._page, apply_url, message.run_id)
+			adapter = get_adapter(detection.platform_id)
+			frame = _find_frame(self._page) if detection.used_iframe else None
+			await adapter.setup(self._page, frame)
+			form_session = FormSession(detection=detection, page_index=0)
+		elif await _needs_navigation_rehydrate(self._page):
+			# Resume run starts a fresh browser context; re-open the form page if needed.
 			try:
-				if self._has_custom_form_extractor:
-					form_json_raw = await self._form_extractor.extract(self._page)
-				else:
-					form_json_raw = await _extract_form_fields(self._page)
+				await self._page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
 			except Exception as exc:
-				return StageResult.fail(f"Form extraction failed: {exc}", "FormExtractionError")
+				return StageResult.fail(f"Rehydrate navigation failed: {exc}", "NavigationError")
+			adapter = get_adapter(form_session.detection.platform_id)
+			frame = _find_frame(self._page) if form_session.detection.used_iframe else None
+			await adapter.setup(self._page, frame)
 
-		questionnaire = _build_questionnaire(form_json_raw)
-		user_profile = _load_user_profile(self._config)
+		page_index = form_session.page_index
+		adapter = get_adapter(form_session.detection.platform_id)
+		page_section = await adapter.get_current_page_section(self._page)
 
-		if self._use_random_questionnaire_answers:
-			answers = _answer_questionnaire_with_random_filler(questionnaire)
-		else:
+		try:
+			fields = await self._extractor.extract(page_section, message.run_id, page_index)
+		except Exception as exc:
+			return StageResult.fail(f"Field extraction failed: {exc}", "ExtractionError")
+		if len(fields) == 0:
+			if hasattr(self._page, "wait_for_timeout"):
+				await self._page.wait_for_timeout(1000)
 			try:
-				answers = await self._llm.call(
-					system=_build_answering_system_prompt(user_profile),
-					user=_render_questionnaire(questionnaire),
-					response_model=QuestionnaireAnswers,
+				fields = await self._extractor.extract(
+					PageSection(label=page_section.label, root="body"),
+					message.run_id,
+					page_index,
 				)
 			except Exception as exc:
-				return StageResult.fail(f"Questionnaire answering failed: {exc}", "LLMResponseError")
+				return StageResult.fail(f"Field extraction retry failed: {exc}", "ExtractionError")
 
-		if answers.unanswered_required:
-			fields = ", ".join(answers.unanswered_required)
+		if len(fields) == 0:
+			current_url = (getattr(self._page, "url", "") or "").strip()
+			html_sample = ""
+			if hasattr(self._page, "content"):
+				try:
+					html_sample = (await self._page.content())[:220].replace("\n", " ")
+				except Exception:
+					html_sample = ""
 			return StageResult.fail(
-				f"AI could not answer required field(s): {fields}",
-				"UnansweredRequiredField",
+				(
+					f"No fields extracted on page {page_index} at {apply_url}; "
+					f"current_url={current_url}; html_sample={html_sample}"
+				),
+				"ExtractionError",
 			)
 
-		form_json_filled = _merge_answers(form_json_raw, answers.answers)
-		result = FormIntelligenceResult(
-			questionnaire=questionnaire,
-			form_json_filled=form_json_filled,
+		try:
+			instructions = await self._map_fields(fields, profile, message.run_id, page_index)
+		except MappingError as exc:
+			return StageResult.fail(str(exc), "MappingError")
+		except Exception as exc:
+			return StageResult.fail(f"Mapping failed: {exc}", "MappingError")
+
+		fi = FormIntelligenceResult(
+			page_index=page_index,
+			page_label=page_section.label,
+			extracted_fields=fields,
+			fill_instructions=instructions,
 			generated_at=datetime.now(timezone.utc),
 		)
-		return StageResult.ok(ctx.model_copy(update={"form_intelligence": result}))
 
-
-def _application_form_to_form_json(application_form: ApplicationForm) -> dict[str, Any]:
-	fields: list[dict[str, Any]] = []
-	for field in application_form.fields:
-		field_type = field.field_type
-		if field_type in {"text", "textarea", "hidden"}:
-			normalized = "text"
-		elif field_type in {"select", "radio"}:
-			normalized = "single_choice"
-		elif field_type == "checkbox":
-			normalized = "multiple_choice"
-		elif field_type == "file":
-			normalized = "file_upload"
-		else:
-			normalized = "text"
-
-		fields.append(
-			{
-				"id": field.name,
-				"label": field.label or field.name,
-				"type": normalized,
-				"required": field.required,
-				"options": list(field.options),
-				"value": [] if normalized == "multiple_choice" else "",
-			}
+		form_session.all_fields.extend(fields)
+		form_session.all_instructions.extend(instructions)
+		return StageResult.ok(
+			ctx.model_copy(update={"form_intelligence": fi, "form_session": form_session})
 		)
 
-	return {"fields": fields}
-
-
-async def _apply_session_cookies(page: Any, ctx: JobApplicationContext) -> None:
-	if ctx.session is None or not ctx.session.authenticated:
-		return
-	# Session records currently do not carry raw cookie secrets; this is a safe no-op hook.
-	_ = page
+	async def _map_fields(
+		self,
+		fields: list[ExtractedField],
+		profile: Any,
+		run_id: str,
+		page_index: int,
+	) -> list[FillInstruction]:
+		if self._use_random_questionnaire_answers:
+			return _build_random_instructions(fields, run_id, page_index)
+		return await self._mapper.map(fields, profile, run_id, page_index)
 
 
 async def _detect_captcha(page: Any) -> str | None:
-	content = (await page.content()).lower()
-	# if "recaptcha" in content:
-	# 	return "recaptcha_v2"
-	# if "hcaptcha" in content:
-	# 	return "hcaptcha"
-	# if "cf-challenge" in content:
-	# 	return "cloudflare"
+	content = (await page.content()).lower() if hasattr(page, "content") else ""
+	if "recaptcha" in content:
+		return "recaptcha_v2"
+	if "hcaptcha" in content:
+		return "hcaptcha"
+	if "cf-challenge" in content:
+		return "cloudflare"
 	return None
 
 
-async def _extract_form_fields(page: Any) -> dict[str, Any]:
-	# Backward-compatible helper retained for tests and legacy call sites.
-	return await AsyncDOMFormExtractor().extract(page)
+def _find_frame(page: Any) -> Any | None:
+	for frame in getattr(page, "frames", []):
+		if getattr(frame, "url", ""):
+			return frame
+	return None
 
 
-def _build_questionnaire(form_json_raw: dict[str, Any]) -> list[dict[str, Any]]:
-	questionnaire: list[dict[str, Any]] = []
-	for field in form_json_raw.get("fields", []):
-		value_type = "choice" if field.get("type") in {"single_choice", "multiple_choice"} else "value"
-		questionnaire.append(
-			{
-				"map": f"direct:{field.get('id', '')}:{value_type}",
-				"question": field.get("label") or field.get("id") or "",
-				"options": field.get("options", []),
-				"answer": "",
-				"required": bool(field.get("required", False)),
-			}
-		)
-	return questionnaire
-
-
-def _render_questionnaire(questionnaire: list[dict[str, Any]]) -> str:
-	parts: list[str] = []
-	for idx, item in enumerate(questionnaire, start=1):
-		parts.append(f"## Q{idx}")
-		parts.append(f"Map: {item.get('map', '')}")
-		parts.append(f"Question: {item.get('question', '')}")
-		parts.append("Options:")
-		options = item.get("options", [])
-		if options:
-			for option in options:
-				parts.append(f"- {option}")
-		else:
-			parts.append("- (free text)")
-		parts.append(f"Answer: {item.get('answer', '')}")
-		parts.append("")
-	return "\n".join(parts)
-
-
-def _answer_questionnaire_with_random_filler(questionnaire: list[dict[str, Any]]) -> QuestionnaireAnswers:
-	from autorole.mock_data.fill_questionnaire_random import fill_questionnaire_text
-
-	rendered = _render_questionnaire(questionnaire)
-	filled = fill_questionnaire_text(rendered)
-	return _parse_questionnaire_answers_from_markdown(filled)
-
-
-def _parse_questionnaire_answers_from_markdown(text: str) -> QuestionnaireAnswers:
-	answers: list[dict[str, str]] = []
-	unanswered_required: list[str] = []
-
-	question_pattern = re.compile(r"^Question:\s*(.*)$")
-	map_pattern = re.compile(r"^Map:\s*(.*)$")
-	answer_pattern = re.compile(r"^Answer:\s*(.*)$")
-
-	current_map = ""
-	current_question = ""
-
-	for raw_line in text.splitlines():
-		line = raw_line.strip()
-		if line.startswith("## Q"):
-			current_map = ""
-			current_question = ""
-			continue
-
-		map_match = map_pattern.match(line)
-		if map_match:
-			current_map = map_match.group(1).strip()
-			continue
-
-		question_match = question_pattern.match(line)
-		if question_match:
-			current_question = question_match.group(1).strip()
-			continue
-
-		answer_match = answer_pattern.match(line)
-		if not answer_match:
-			continue
-
-		answer = answer_match.group(1).strip()
-		if not current_map:
-			continue
-		answers.append({"map": current_map, "answer": answer})
-
-		is_required = "*" in current_question
-		if is_required and not answer:
-			unanswered_required.append(current_map)
-
-	return QuestionnaireAnswers(answers=answers, unanswered_required=unanswered_required)
-
-
-def _build_answering_system_prompt(user_profile: dict[str, Any]) -> str:
-	return (
-		"You are completing a job application questionnaire. "
-		"Use the provided user profile and return strict JSON matching: "
-		"{answers: [{map: str, answer: str}], unanswered_required: [str]}.\n\n"
-		f"User profile:\n{json.dumps(user_profile, ensure_ascii=True, indent=2)}"
-	)
-
-
-def _load_user_profile(config: AppConfig) -> dict[str, Any]:
-	profile_path = Path(config.base_dir).expanduser() / "user_profile.json"
-	if not profile_path.exists():
-		return {}
+async def _needs_navigation_rehydrate(page: Any) -> bool:
+	url = (getattr(page, "url", "") or "").strip().lower()
+	if not url or url == "about:blank":
+		return True
+	if not hasattr(page, "content"):
+		return False
 	try:
-		return json.loads(profile_path.read_text(encoding="utf-8"))
+		html = (await page.content()).strip().lower()
 	except Exception:
-		return {}
+		return False
+	if not html:
+		return True
+	return html in {"<html><head></head><body></body></html>", "<html><body></body></html>"}
 
 
-def _merge_answers(
-	form_json_raw: dict[str, Any],
-	answers: list[dict[str, str]],
-) -> dict[str, Any]:
-	answers_by_map = {item.get("map", ""): item.get("answer", "") for item in answers}
-	merged = dict(form_json_raw)
-	fields = [dict(field) for field in merged.get("fields", [])]
+def _build_random_instructions(
+	fields: list[ExtractedField],
+	run_id: str,
+	page_index: int,
+) -> list[FillInstruction]:
+	instructions: list[FillInstruction] = []
 	for field in fields:
-		value_type = "choice" if field.get("type") in {"single_choice", "multiple_choice"} else "value"
-		map_key = f"direct:{field.get('id', '')}:{value_type}"
-		if map_key not in answers_by_map:
-			continue
-		answer = answers_by_map[map_key]
-		if field.get("type") == "multiple_choice":
-			field["value"] = [part.strip() for part in answer.split(",") if part.strip()] if answer else []
+		value: str | None
+		action = "fill"
+		source = "generated"
+		if field.field_type in {"select", "radio", "combobox_lazy"}:
+			if field.options:
+				value = field.options[0]
+				source = "profile_inferred"
+			elif field.required:
+				value = "N/A"
+			else:
+				action = "skip"
+				value = None
+				source = "no_match"
+		elif field.field_type == "checkbox":
+			value = ",".join(field.options[:1]) if field.options else ""
+		elif field.field_type in {"hidden", "file"}:
+			action = "skip"
+			value = None
+			source = "no_match"
 		else:
-			field["value"] = answer
-	merged["fields"] = fields
-	return merged
+			value = "Test Value"
+		instructions.append(
+			FillInstruction(
+				field_id=field.id,
+				run_id=run_id,
+				action=action,
+				value=value,
+				source=source,
+				page_index=page_index,
+			)
+		)
+	return instructions
 
 
 class FormIntelligenceExecutor(AutoRoleStage):
@@ -359,64 +305,27 @@ class FormIntelligenceExecutor(AutoRoleStage):
 		fi = ctx.form_intelligence
 		if fi is None:
 			return
+		page_label = fi.page_label.replace(" ", "_")[:30] if fi.page_label else "page"
 		self._write_artifact(
-			"questionnaire.json",
-			json.dumps(fi.questionnaire, indent=2, ensure_ascii=False) + "\n",
+			f"page_{fi.page_index}_{page_label}_fields.json",
+			json.dumps([item.model_dump(mode="json") for item in fi.extracted_fields], indent=2) + "\n",
 			ctx.run_id,
 		)
 		self._write_artifact(
-			"form_json_filled.json",
-			json.dumps(fi.form_json_filled, indent=2, ensure_ascii=False) + "\n",
+			f"page_{fi.page_index}_{page_label}_instructions.json",
+			json.dumps([item.model_dump(mode="json") for item in fi.fill_instructions], indent=2) + "\n",
 			ctx.run_id,
 		)
-		md_lines = [
-			"# Answered Form",
-			"",
-			"## Questionnaire",
-			"",
-			json.dumps(fi.questionnaire, indent=2, ensure_ascii=False),
-			"",
-			"## Filled Form JSON",
-			"",
-			json.dumps(fi.form_json_filled, indent=2, ensure_ascii=False),
-			"",
-		]
-		self._write_artifact("answered_form.md", "\n".join(md_lines), ctx.run_id)
 
 	async def on_failure(self, ctx: JobApplicationContext, result: Any, attempt: int) -> JobApplicationContext | None:
-		_ = attempt
-		if self._mode == "apply-dryrun":
-			fallback = FormIntelligenceResult(
-				questionnaire=[],
-				form_json_filled={"fields": []},
-				generated_at=datetime.now(timezone.utc),
-			)
-			self._write_artifact(
-				"error.txt",
-				(
-					f"error_type={getattr(result, 'error_type', '')}\n"
-					f"error={result.error}\n"
-					"fallback=empty_form_payload\n"
-				),
-				ctx.run_id,
-			)
-			self._write_artifact(
-				"answered_form.md",
-				(
-					"# Answered Form\n\n"
-					"Form intelligence failed; fallback empty payload was used in apply-dryrun mode.\n\n"
-					"## Questionnaire\n\n[]\n\n"
-					"## Filled Form JSON\n\n{\n  \"fields\": []\n}\n"
-				),
-				ctx.run_id,
-			)
-			print(
-				f"[warn] form_intelligence failed in apply-dryrun mode; {result.error} "
-				"continuing with empty form payload"
-			)
-			return ctx.model_copy(update={"form_intelligence": fallback})
 		return await super().on_failure(ctx, result, attempt)
 
 	def log_ok(self, ctx: JobApplicationContext, attempt: int) -> None:
 		_ = attempt
-		print("[ok] form_intelligence -> form extracted and filled")
+		fi = ctx.form_intelligence
+		if fi is None:
+			return
+		print(
+			f"[ok] form_intelligence -> page={fi.page_index} "
+			f"fields={len(fi.extracted_fields)} label={fi.page_label!r}"
+		)

@@ -6,6 +6,14 @@ from typing import Any
 import pydantic
 from pydantic import BaseModel, Field
 
+from autorole.integrations.form_controls.models import (
+	DetectionResult,
+	ExecutionResult,
+	ExtractedField,
+	FieldOutcome,
+	FillInstruction,
+)
+
 try:
 	from pipeline.types import PipelineContext
 except Exception:
@@ -59,20 +67,36 @@ class SessionResult(BaseModel):
 	established_at: datetime
 
 
+class FormSession(BaseModel):
+	detection: DetectionResult
+	page_index: int = 0
+	all_fields: list[ExtractedField] = Field(default_factory=list)
+	all_instructions: list[FillInstruction] = Field(default_factory=list)
+	all_outcomes: list[FieldOutcome] = Field(default_factory=list)
+	last_advance_action: str = "next_page"
+	screenshots: list[str] = Field(default_factory=list)
+
+
 class FormIntelligenceResult(BaseModel):
-	questionnaire: list[dict[str, Any]]
-	form_json_filled: dict[str, Any]
+	page_index: int = 0
+	page_label: str = ""
+	extracted_fields: list[ExtractedField] = Field(default_factory=list)
+	fill_instructions: list[FillInstruction] = Field(default_factory=list)
 	generated_at: datetime
+	questionnaire: list[dict[str, Any]] = Field(default_factory=list)
+	form_json_filled: dict[str, Any] = Field(default_factory=dict)
 
 
 class ApplicationResult(BaseModel):
 	resume_id: str
+	execution_result: ExecutionResult | None = None
+	audit_log_path: str = ""
+	applied_at: datetime
 	questionnaire: list[dict[str, Any]] = Field(default_factory=list)
 	form_json: dict[str, Any] = Field(default_factory=dict)
 	fill_report: dict[str, Any] = Field(default_factory=dict)
-	submission_status: str
-	submission_confirmed: bool
-	applied_at: datetime
+	submission_status: str = ""
+	submission_confirmed: bool = False
 
 
 class DiffChange(BaseModel):
@@ -146,4 +170,5 @@ class JobApplicationContext(PipelineContext):
 	packaged: PackagedResume | None = None
 	session: SessionResult | None = None
 	form_intelligence: FormIntelligenceResult | None = None
+	form_session: FormSession | None = None
 	applied: ApplicationResult | None = None
