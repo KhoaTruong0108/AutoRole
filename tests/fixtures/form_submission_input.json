@@ -1,0 +1,1464 @@
+{
+  "run_id": "earnin_7440771",
+  "started_at": "2026-03-27T01:18:02.637805Z",
+  "listing": {
+    "job_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
+    "apply_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
+    "company_name": "earnin",
+    "job_id": "7440771",
+    "job_title": "Senior Staff Software Engineer",
+    "platform": "greenhouse",
+    "crawled_at": "2026-03-27T01:18:02.637765Z"
+  },
+  "score": {
+    "resume_id": "master",
+    "jd_html": "&lt;div class=&quot;content-intro&quot;&gt;&lt;h3&gt;&lt;strong&gt;About EarnIn&lt;/strong&gt;&lt;/h3&gt;\n&lt;p&gt;As one of the first pioneers of earned wage access, our passion at EarnIn is building products that deliver real-time financial flexibility for those with the unique needs of living paycheck to paycheck. Our community members access their earnings as they earn them, with options to spend, save, and grow their money without mandatory fees, interest rates, or credit checks.&lt;/p&gt;\n&lt;p&gt;We\u2019re fortunate to have an incredibly experienced leadership team, combined with world-class funding partners like A16Z, Matrix Partners, DST, Ribbit Capital, and a very healthy core business with a tremendous runway. We\u2019re growing fast and are excited to continue bringing world-class talent onboard to help shape the next chapter of our growth journey.&lt;/p&gt;&lt;/div&gt;&lt;div&gt;\n&lt;div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;POSITION SUMMARY&lt;/strong&gt;&lt;/div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;br&gt;We&#39;re on a mission to reinvent the financial system and make it work for people. We are seeking passionate and resourceful engineers to join our backend development teams. You will have the opportunity to make a meaningful impact with your technical contributions and influence how people think about money. As a Senior Staff Engineer at EarnIn, you will work cross-functionally with various teams and will have the opportunity to contribute to the design and development of our services and both new and legacy products. The US base salary range for this full-time position is $251,000 to $306,000, plus equity and benefits. Our salary ranges are determined by role, level, and location. This is a remote position requiring occasional travel to our Mountain View HQ unless you are located in a commutable distance from Mountain View, then a 2 day a week hybrid policy applies.&amp;nbsp;&lt;br&gt;&lt;br&gt;&lt;/div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT YOU&#39;LL DO&lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Drive the design &amp;amp; implementation of new features and/or re-architect existing systems - break down complex problems into their bare essentials, translate this complexity into elegant design, and create high-quality, maintainable code.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Make a meaningful impact on the lives of our community members.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Design &amp;amp; deliver robust microservice integrations via REST/gRPC APIs using various communication, consistency, and coordination strategies.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Collaborate and mentor other senior engineers while providing thoughtful guidance using code, design, and architecture reviews.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Contribute to defining technical direction, planning the roadmap, escalating issues, and synthesizing feedback to ensure team success.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Estimate and manage team project timelines and risks&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Care passionately about producing high-quality designs and code&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Participate in hiring and onboarding for new team members.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Lead cross-team engineering initiatives.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT SETS US APART &lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;High-impact roles at a fast-moving company that\u2019s aggressively growing our user base.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We are a collaborative team that genuinely enjoys working together.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We believe in empowering our people to be successful.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We\u2019re building a product that reimagines the way money moves to empower human potential.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT WE&#39;RE LOOKING FOR &lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;8+ years of development experience in backend or full-stack software development, including IC Leadership experience&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Bachelor&#39;s, Master\u2019s, or PhD degree in computer science, computer engineering, or a related technical discipline, or equivalent industry experience&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Expertise in trade-off analysis for distributed architectures.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Proficient in at least one modern programming language, and the ability to understand more than one - we currently work in Kotlin and C#&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Proficient in running multiple critical tech initiatives in parallel&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Experience using AI-assisted development tools (e.g., Copilot, Cursor, LLMs) is a plus&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Familiarity with the clean architecture approach.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Experience with various data storage, including relational and document databases.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Excellent written and verbal communication skills.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Being self-motivated and able to work independently with minimal supervision.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;/div&gt;\n&lt;/div&gt;\n&lt;div&gt;#LI-Remote&lt;/div&gt;\n&lt;div id=&quot;fortidlp-input-element-parent&quot;&gt;&lt;/div&gt;\n&lt;div id=&quot;fortidlp-input-element-parent&quot;&gt;&lt;/div&gt;&lt;div class=&quot;content-conclusion&quot;&gt;&lt;p&gt;At EarnIn, we believe that the best way to build a financial system that works for everyday people is by hiring a team that represents our diverse community. Our team is diverse not only in background and experience but also in perspective. We celebrate our diversity and strive to create a culture of belonging. EarnIn does not unlawfully discriminate based on race, color, religion, sex (including pregnancy, childbirth, breastfeeding, or related medical conditions), gender identity, gender expression, national origin, ancestry, citizenship, age, physical or mental disability, legally protected medical condition, family care status, military or veteran status, marital status, registered domestic partner status, sexual orientation, genetic information, or any other basis protected by local, state, or federal laws. EarnIn is an E-Verify participant.&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;EarnIn does not accept unsolicited resumes from individual recruiters or third-party recruiting agencies in response to job postings. No fee will be paid to third parties who submit unsolicited candidates directly to our hiring managers or HR team.&lt;/p&gt;&lt;/div&gt;",
+    "jd_breakdown": {
+      "qualifications": [
+        "8+ years of development experience in backend or full-stack software development, including IC Leadership experience",
+        "Bachelor's, Master\u2019s, or PhD degree in computer science, computer engineering, or a related technical discipline, or equivalent industry experience"
+      ],
+      "responsibilities": [
+        "Drive the design & implementation of new features and/or re-architect existing systems - break down complex problems into their bare essentials, translate this complexity into elegant design, and create high-quality, maintainable code.",
+        "Make a meaningful impact on the lives of our community members.",
+        "Design & deliver robust microservice integrations via REST/gRPC APIs using various communication, consistency, and coordination strategies.",
+        "Collaborate and mentor other senior engineers while providing thoughtful guidance using code, design, and architecture reviews.",
+        "Contribute to defining technical direction, planning the roadmap, escalating issues, and synthesizing feedback to ensure team success.",
+        "Estimate and manage team project timelines and risks",
+        "Care passionately about producing high-quality designs and code",
+        "Participate in hiring and onboarding for new team members.",
+        "Lead cross-team engineering initiatives."
+      ],
+      "required_skills": [
+        "Expertise in trade-off analysis for distributed architectures.",
+        "Proficient in at least one modern programming language, and the ability to understand more than one - we currently work in Kotlin and C#",
+        "Experience using AI-assisted development tools (e.g., Copilot, Cursor, LLMs) is a plus",
+        "Familiarity with the clean architecture approach.",
+        "Experience with various data storage, including relational and document databases."
+      ],
+      "preferred_skills": [
+        "Proficient in running multiple critical tech initiatives in parallel"
+      ],
+      "culture_signals": [
+        "We are a collaborative team that genuinely enjoys working together.",
+        "We believe in empowering our people to be successful.",
+        "We\u2019re building a product that reimagines the way money moves to empower human potential."
+      ]
+    },
+    "overall_score": 0.85,
+    "criteria_scores": {
+      "technical_skills": 0.85,
+      "experience_depth": 0.8,
+      "seniority_alignment": 0.95,
+      "domain_relevance": 0.9,
+      "culture_fit": 0.7
+    },
+    "matched": [
+      "technical_skills",
+      "experience_depth",
+      "seniority_alignment",
+      "domain_relevance",
+      "culture_fit"
+    ],
+    "mismatched": [],
+    "scored_at": "2026-03-27T01:19:11.952605Z"
+  },
+  "tailored": {
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "parent_resume_id": "master",
+    "tailoring_degree": 0,
+    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.md",
+    "diff_summary": "{\"tailoring_degree\":0,\"overall_delta\":0.0,\"sections\":[],\"total_changes\":0}",
+    "tailored_at": "2026-03-27T01:19:11.954514Z"
+  },
+  "packaged": {
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
+    "packaged_at": "2026-03-27T01:19:12.388237Z"
+  },
+  "session": {
+    "platform": "greenhouse",
+    "authenticated": false,
+    "session_note": "public platform - no authentication required",
+    "established_at": "2026-03-27T01:19:12.388823Z"
+  },
+  "form_intelligence": {
+    "page_index": 0,
+    "page_label": "Application form",
+    "extracted_fields": [
+      {
+        "id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='first_name'], [id='first_name']",
+        "label": "First Name",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='last_name'], [id='last_name']",
+        "label": "Last Name",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='email'], [id='email']",
+        "label": "Email",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='country'], [id='country']",
+        "label": "Country*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_4'], [id='field_4']",
+        "label": "field_4",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='iti-0__search-input'], [id='iti-0__search-input']",
+        "label": "Search",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='phone'], [id='phone']",
+        "label": "Phone",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='candidate-location'], [id='candidate-location']",
+        "label": "Location (City)*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_8'], [id='field_8']",
+        "label": "field_8",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "file",
+        "selector": "[name='resume'], [id='resume']",
+        "label": "Attach",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "file",
+        "selector": "[name='cover_letter'], [id='cover_letter']",
+        "label": "Attach",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878059'], [id='question_61878059']",
+        "label": "Are you legally authorized to work in the country that this role is based?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_12'], [id='field_12']",
+        "label": "field_12",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878060'], [id='question_61878060']",
+        "label": "Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_14'], [id='field_14']",
+        "label": "field_14",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878061'], [id='question_61878061']",
+        "label": "What is your preferred pronoun?",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878062'], [id='question_61878062']",
+        "label": "Have you previously applied to a role at EarnIn?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_17'], [id='field_17']",
+        "label": "field_17",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878063'], [id='question_61878063']",
+        "label": "What is your primary mailing address?",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878064'], [id='question_61878064']",
+        "label": "LinkedIn Profile",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878065'], [id='question_61878065']",
+        "label": "The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_21'], [id='field_21']",
+        "label": "field_21",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_64700572'], [id='question_64700572']",
+        "label": "Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_23'], [id='field_23']",
+        "label": "field_23",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='gender'], [id='gender']",
+        "label": "Gender",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='hispanic_ethnicity'], [id='hispanic_ethnicity']",
+        "label": "Are you Hispanic/Latino?",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='veteran_status'], [id='veteran_status']",
+        "label": "Veteran Status",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='disability_status'], [id='disability_status']",
+        "label": "Disability Status",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "c460a77c-b3d2-535c-879e-b492e6d92193",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "textarea",
+        "selector": "[name='g-recaptcha-response'], [id='g-recaptcha-response']",
+        "label": "g-recaptcha-response",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      }
+    ],
+    "fill_instructions": [
+      {
+        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Alex",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Nguyen",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "alex.nguyen.dev@example.com",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "United States",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "+1-415-555-0188",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "San Francisco, CA",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "no",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "he/him",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "no",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "245 Mission Street, San Francisco, CA 94105",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "https://www.linkedin.com/in/alex-nguyen-dev",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "yes",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      }
+    ],
+    "generated_at": "2026-03-27T01:21:38.489004Z",
+    "questionnaire": [],
+    "form_json_filled": {}
+  },
+  "form_session": {
+    "detection": {
+      "run_id": "earnin_7440771",
+      "platform_id": "greenhouse",
+      "apply_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
+      "used_iframe": false,
+      "detection_method": "url"
+    },
+    "page_index": 0,
+    "all_fields": [
+      {
+        "id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='first_name'], [id='first_name']",
+        "label": "First Name",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='last_name'], [id='last_name']",
+        "label": "Last Name",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='email'], [id='email']",
+        "label": "Email",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='country'], [id='country']",
+        "label": "Country*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_4'], [id='field_4']",
+        "label": "field_4",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='iti-0__search-input'], [id='iti-0__search-input']",
+        "label": "Search",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='phone'], [id='phone']",
+        "label": "Phone",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='candidate-location'], [id='candidate-location']",
+        "label": "Location (City)*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_8'], [id='field_8']",
+        "label": "field_8",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "file",
+        "selector": "[name='resume'], [id='resume']",
+        "label": "Attach",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "file",
+        "selector": "[name='cover_letter'], [id='cover_letter']",
+        "label": "Attach",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878059'], [id='question_61878059']",
+        "label": "Are you legally authorized to work in the country that this role is based?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_12'], [id='field_12']",
+        "label": "field_12",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878060'], [id='question_61878060']",
+        "label": "Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_14'], [id='field_14']",
+        "label": "field_14",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878061'], [id='question_61878061']",
+        "label": "What is your preferred pronoun?",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878062'], [id='question_61878062']",
+        "label": "Have you previously applied to a role at EarnIn?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_17'], [id='field_17']",
+        "label": "field_17",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878063'], [id='question_61878063']",
+        "label": "What is your primary mailing address?",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878064'], [id='question_61878064']",
+        "label": "LinkedIn Profile",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_61878065'], [id='question_61878065']",
+        "label": "The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_21'], [id='field_21']",
+        "label": "field_21",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='question_64700572'], [id='question_64700572']",
+        "label": "Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='field_23'], [id='field_23']",
+        "label": "field_23",
+        "required": true,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='gender'], [id='gender']",
+        "label": "Gender",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='hispanic_ethnicity'], [id='hispanic_ethnicity']",
+        "label": "Are you Hispanic/Latino?",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='veteran_status'], [id='veteran_status']",
+        "label": "Veteran Status",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "text",
+        "selector": "[name='disability_status'], [id='disability_status']",
+        "label": "Disability Status",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      },
+      {
+        "id": "c460a77c-b3d2-535c-879e-b492e6d92193",
+        "run_id": "earnin_7440771",
+        "page_index": 0,
+        "page_label": "Application form",
+        "field_type": "textarea",
+        "selector": "[name='g-recaptcha-response'], [id='g-recaptcha-response']",
+        "label": "g-recaptcha-response",
+        "required": false,
+        "options": [],
+        "prefilled_value": ""
+      }
+    ],
+    "all_instructions": [
+      {
+        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Alex",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Nguyen",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "alex.nguyen.dev@example.com",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "United States",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "+1-415-555-0188",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "San Francisco, CA",
+        "source": "profile_direct",
+        "page_index": 0
+      },
+      {
+        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "yes",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": "null",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "I understand",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      }
+    ],
+    "all_outcomes": [
+      {
+        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "action_taken": "fill",
+        "value_used": "Alex",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "action_taken": "fill",
+        "value_used": "Nguyen",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "action_taken": "fill",
+        "value_used": "alex.nguyen.dev@example.com",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "action_taken": "fill",
+        "value_used": "United States",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "action_taken": "fill",
+        "value_used": "+1-415-555-0188",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "action_taken": "fill",
+        "value_used": "San Francisco, CA",
+        "status": "ok",
+        "error_message": null
+      },
+      {
+        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "action_taken": "fill",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      },
+      {
+        "field_id": "c460a77c-b3d2-535c-879e-b492e6d92193",
+        "action_taken": "skip",
+        "value_used": null,
+        "status": "skipped",
+        "error_message": null
+      }
+    ],
+    "last_advance_action": "done",
+    "screenshots": [
+      "logs/earnin_7440771/page_0_Application_form.png"
+    ]
+  },
+  "applied": null
+}

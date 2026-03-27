@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import aiosqlite
 import pytest
+import pytest_asyncio
 
 from autorole.config import AppConfig
 from autorole.context import JobListing
+from autorole.db.repository import JobRepository
 from autorole.integrations.scrapers.base import JobBoardScraper
+from autorole.job_pipeline import init_db
+from autorole.queue import DEAD_LETTER_Q, Message
 
 
 @pytest.fixture
@@ -42,6 +48,23 @@ SAMPLE_JD_HTML = (
 	"<ul><li>Python</li><li>Kubernetes</li></ul></body></html>"
 )
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def load_fixture(name: str) -> dict[str, Any]:
+	"""Load a JSON fixture by filename from tests/fixtures/."""
+	return json.loads((FIXTURES_DIR / name).read_text(encoding="utf-8"))
+
+
+def make_worker_message(ctx_dict: dict[str, Any], input_queue: str, reply_queue: str) -> Message:
+	return Message(
+		run_id=str(ctx_dict.get("run_id", "test-run-001")),
+		stage=input_queue.removesuffix("_q"),
+		payload=ctx_dict,
+		reply_queue=reply_queue,
+		dead_letter_queue=DEAD_LETTER_Q,
+	)
+
 
 class MockLLMClient:
 	def __init__(self, response: Any = None) -> None:
@@ -50,6 +73,17 @@ class MockLLMClient:
 	async def call(self, *args: Any, **kwargs: Any) -> Any:
 		_ = (args, kwargs)
 		return self.response
+
+
+class MockStage:
+	"""Stub for any stage. Returns a pre-configured result on execute()."""
+
+	def __init__(self, result: Any) -> None:
+		self._result = result
+
+	async def execute(self, message: Any) -> Any:
+		_ = message
+		return self._result
 
 
 class MockPage:
@@ -72,3 +106,16 @@ class MockScraper(JobBoardScraper):
 	async def search(self, filters: Any) -> list[JobListing]:
 		_ = filters
 		return self._listings
+
+
+@pytest_asyncio.fixture
+async def db(tmp_path: Path) -> Any:
+	db_path = tmp_path / "test.db"
+	async with aiosqlite.connect(db_path) as conn:
+		await init_db(conn)
+		yield conn
+
+
+@pytest_asyncio.fixture
+async def repo(db: Any) -> JobRepository:
+	return JobRepository(db)

@@ -1,0 +1,83 @@
+{
+  "run_id": "earnin_7440771",
+  "started_at": "2026-03-27T01:18:02.637805Z",
+  "listing": {
+    "job_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
+    "apply_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
+    "company_name": "earnin",
+    "job_id": "7440771",
+    "job_title": "Senior Staff Software Engineer",
+    "platform": "greenhouse",
+    "crawled_at": "2026-03-27T01:18:02.637765Z"
+  },
+  "score": {
+    "resume_id": "master",
+    "jd_html": "&lt;div class=&quot;content-intro&quot;&gt;&lt;h3&gt;&lt;strong&gt;About EarnIn&lt;/strong&gt;&lt;/h3&gt;\n&lt;p&gt;As one of the first pioneers of earned wage access, our passion at EarnIn is building products that deliver real-time financial flexibility for those with the unique needs of living paycheck to paycheck. Our community members access their earnings as they earn them, with options to spend, save, and grow their money without mandatory fees, interest rates, or credit checks.&lt;/p&gt;\n&lt;p&gt;We\u2019re fortunate to have an incredibly experienced leadership team, combined with world-class funding partners like A16Z, Matrix Partners, DST, Ribbit Capital, and a very healthy core business with a tremendous runway. We\u2019re growing fast and are excited to continue bringing world-class talent onboard to help shape the next chapter of our growth journey.&lt;/p&gt;&lt;/div&gt;&lt;div&gt;\n&lt;div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;POSITION SUMMARY&lt;/strong&gt;&lt;/div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;br&gt;We&#39;re on a mission to reinvent the financial system and make it work for people. We are seeking passionate and resourceful engineers to join our backend development teams. You will have the opportunity to make a meaningful impact with your technical contributions and influence how people think about money. As a Senior Staff Engineer at EarnIn, you will work cross-functionally with various teams and will have the opportunity to contribute to the design and development of our services and both new and legacy products. The US base salary range for this full-time position is $251,000 to $306,000, plus equity and benefits. Our salary ranges are determined by role, level, and location. This is a remote position requiring occasional travel to our Mountain View HQ unless you are located in a commutable distance from Mountain View, then a 2 day a week hybrid policy applies.&amp;nbsp;&lt;br&gt;&lt;br&gt;&lt;/div&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT YOU&#39;LL DO&lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Drive the design &amp;amp; implementation of new features and/or re-architect existing systems - break down complex problems into their bare essentials, translate this complexity into elegant design, and create high-quality, maintainable code.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Make a meaningful impact on the lives of our community members.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Design &amp;amp; deliver robust microservice integrations via REST/gRPC APIs using various communication, consistency, and coordination strategies.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Collaborate and mentor other senior engineers while providing thoughtful guidance using code, design, and architecture reviews.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Contribute to defining technical direction, planning the roadmap, escalating issues, and synthesizing feedback to ensure team success.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Estimate and manage team project timelines and risks&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Care passionately about producing high-quality designs and code&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Participate in hiring and onboarding for new team members.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Lead cross-team engineering initiatives.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT SETS US APART &lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;High-impact roles at a fast-moving company that\u2019s aggressively growing our user base.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We are a collaborative team that genuinely enjoys working together.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We believe in empowering our people to be successful.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;We\u2019re building a product that reimagines the way money moves to empower human potential.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;div class=&quot;p-rich_text_section&quot;&gt;&lt;strong&gt;WHAT WE&#39;RE LOOKING FOR &lt;/strong&gt;&lt;/div&gt;\n&lt;ul class=&quot;p-rich_text_list p-rich_text_list__bullet p-rich_text_list--nested&quot; data-stringify-type=&quot;unordered-list&quot; data-list-tree=&quot;true&quot; data-indent=&quot;0&quot; data-border=&quot;0&quot;&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;8+ years of development experience in backend or full-stack software development, including IC Leadership experience&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Bachelor&#39;s, Master\u2019s, or PhD degree in computer science, computer engineering, or a related technical discipline, or equivalent industry experience&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Expertise in trade-off analysis for distributed architectures.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Proficient in at least one modern programming language, and the ability to understand more than one - we currently work in Kotlin and C#&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Proficient in running multiple critical tech initiatives in parallel&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Experience using AI-assisted development tools (e.g., Copilot, Cursor, LLMs) is a plus&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Familiarity with the clean architecture approach.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Experience with various data storage, including relational and document databases.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Excellent written and verbal communication skills.&lt;/li&gt;\n&lt;li data-stringify-indent=&quot;0&quot; data-stringify-border=&quot;0&quot;&gt;Being self-motivated and able to work independently with minimal supervision.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;/div&gt;\n&lt;/div&gt;\n&lt;div&gt;#LI-Remote&lt;/div&gt;\n&lt;div id=&quot;fortidlp-input-element-parent&quot;&gt;&lt;/div&gt;\n&lt;div id=&quot;fortidlp-input-element-parent&quot;&gt;&lt;/div&gt;&lt;div class=&quot;content-conclusion&quot;&gt;&lt;p&gt;At EarnIn, we believe that the best way to build a financial system that works for everyday people is by hiring a team that represents our diverse community. Our team is diverse not only in background and experience but also in perspective. We celebrate our diversity and strive to create a culture of belonging. EarnIn does not unlawfully discriminate based on race, color, religion, sex (including pregnancy, childbirth, breastfeeding, or related medical conditions), gender identity, gender expression, national origin, ancestry, citizenship, age, physical or mental disability, legally protected medical condition, family care status, military or veteran status, marital status, registered domestic partner status, sexual orientation, genetic information, or any other basis protected by local, state, or federal laws. EarnIn is an E-Verify participant.&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;EarnIn does not accept unsolicited resumes from individual recruiters or third-party recruiting agencies in response to job postings. No fee will be paid to third parties who submit unsolicited candidates directly to our hiring managers or HR team.&lt;/p&gt;&lt;/div&gt;",
+    "jd_breakdown": {
+      "qualifications": [
+        "8+ years of development experience in backend or full-stack software development, including IC Leadership experience",
+        "Bachelor's, Master\u2019s, or PhD degree in computer science, computer engineering, or a related technical discipline, or equivalent industry experience"
+      ],
+      "responsibilities": [
+        "Drive the design & implementation of new features and/or re-architect existing systems - break down complex problems into their bare essentials, translate this complexity into elegant design, and create high-quality, maintainable code.",
+        "Make a meaningful impact on the lives of our community members.",
+        "Design & deliver robust microservice integrations via REST/gRPC APIs using various communication, consistency, and coordination strategies.",
+        "Collaborate and mentor other senior engineers while providing thoughtful guidance using code, design, and architecture reviews.",
+        "Contribute to defining technical direction, planning the roadmap, escalating issues, and synthesizing feedback to ensure team success.",
+        "Estimate and manage team project timelines and risks",
+        "Care passionately about producing high-quality designs and code",
+        "Participate in hiring and onboarding for new team members.",
+        "Lead cross-team engineering initiatives."
+      ],
+      "required_skills": [
+        "Expertise in trade-off analysis for distributed architectures.",
+        "Proficient in at least one modern programming language, and the ability to understand more than one - we currently work in Kotlin and C#",
+        "Experience using AI-assisted development tools (e.g., Copilot, Cursor, LLMs) is a plus",
+        "Familiarity with the clean architecture approach.",
+        "Experience with various data storage, including relational and document databases."
+      ],
+      "preferred_skills": [
+        "Proficient in running multiple critical tech initiatives in parallel"
+      ],
+      "culture_signals": [
+        "We are a collaborative team that genuinely enjoys working together.",
+        "We believe in empowering our people to be successful.",
+        "We\u2019re building a product that reimagines the way money moves to empower human potential."
+      ]
+    },
+    "overall_score": 0.85,
+    "criteria_scores": {
+      "technical_skills": 0.85,
+      "experience_depth": 0.8,
+      "seniority_alignment": 0.95,
+      "domain_relevance": 0.9,
+      "culture_fit": 0.7
+    },
+    "matched": [
+      "technical_skills",
+      "experience_depth",
+      "seniority_alignment",
+      "domain_relevance",
+      "culture_fit"
+    ],
+    "mismatched": [],
+    "scored_at": "2026-03-27T01:19:11.952605Z"
+  },
+  "tailored": {
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "parent_resume_id": "master",
+    "tailoring_degree": 0,
+    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.md",
+    "diff_summary": "{\"tailoring_degree\":0,\"overall_delta\":0.0,\"sections\":[],\"total_changes\":0}",
+    "tailored_at": "2026-03-27T01:19:11.954514Z"
+  },
+  "packaged": {
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
+    "packaged_at": "2026-03-27T01:19:12.388237Z"
+  },
+  "session": null,
+  "form_intelligence": null,
+  "form_session": null,
+  "applied": null
+}

@@ -163,3 +163,139 @@ For each `run_id`, stage outputs are persisted under:
 
 The main trace log includes `RUN_ARTIFACT_INDEX` and `STAGE_ARTIFACT` lines with exact file paths,
 so artifacts are directly linkable from trace entries.
+
+## Per-Stage Dev Harness
+Use the stage dev harness to run exactly one worker stage in isolation and validate output routing,
+artifacts, and checkpoint writes without running the full pipeline.
+
+Entry point:
+
+```bash
+PYTHONPATH=src python3 -m autorole.workers.devrun --stage <stage> --input-file <json>
+```
+
+You can provide input from either:
+- `--input-file` (fixture JSON or exported checkpoint JSON)
+- `--input-run-id` (loads latest checkpoint context from DB)
+
+Dry-run mode (no execution, just queue/report preview):
+
+```bash
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage packaging \
+	--input-file tests/fixtures/packaging_input.json \
+	--dry-run
+```
+
+### Stage Commands (Fixture Driven)
+
+```bash
+# qualification
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage qualification \
+	--input-file tests/fixtures/qualification_input.json \
+	--headless
+
+# packaging
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage packaging \
+	--input-file tests/fixtures/packaging_input.json
+
+# session
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage session \
+	--input-file tests/fixtures/session_input.json \
+	--mode apply
+
+# form_intelligence
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage form_intelligence \
+	--input-file tests/fixtures/form_intelligence_input.json \
+	--mode apply \
+	--headless
+
+# form_submission
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage form_submission \
+	--input-file tests/fixtures/form_submission_input.json \
+	--mode apply \
+	--headless
+
+# concluding
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage concluding \
+	--input-file tests/fixtures/concluding_input.json
+```
+
+### Resume-Checkpoint Driven Example
+
+```bash
+PYTHONPATH=src python3 -m autorole.workers.devrun \
+	--stage form_submission \
+	--input-run-id <run_id> \
+	--mode apply \
+	--headless
+```
+
+### Output Report
+Each run prints:
+- stage name + run_id
+- decision (`pass`, `loop`, or `block`)
+- output queue message summary
+- dead-letter queue status
+- artifact directory path
+- DB checkpoint state
+
+## Export Fixtures From Real URL
+Use the helper script to run one real URL and export all stage fixture JSON files into `tests/fixtures`.
+
+Recommended shell sequence:
+
+```bash
+cd /Users/khoatruong0108/workspace/AutoRole
+source .venv/bin/activate
+```
+
+Run and export in one step:
+
+```bash
+python3 scripts/export_fixtures_from_run.py \
+	--job-url "https://job-boards.greenhouse.io/earnin/jobs/7440771" \
+	--job-platform greenhouse \
+	--mode observe \
+	--headless \
+	--overwrite
+```
+
+Export only (no new run), using latest matching checkpoint from DB:
+
+```bash
+python3 scripts/export_fixtures_from_run.py \
+	--skip-run \
+	--job-url "https://job-boards.greenhouse.io/earnin/jobs/7440771" \
+	--overwrite
+```
+
+Export from a specific run id:
+
+```bash
+python3 scripts/export_fixtures_from_run.py \
+	--skip-run \
+	--run-id earnin_7440771 \
+	--overwrite
+```
+
+Populate later submission fields (form submission and concluding fixtures):
+
+```bash
+python3 scripts/export_fixtures_from_run.py \
+	--job-url "https://job-boards.greenhouse.io/earnin/jobs/7440771" \
+	--job-platform greenhouse \
+	--mode apply-dryrun \
+	--headless \
+	--overwrite
+```
+
+Notes:
+- `observe` mode may leave later fields empty for `form_submission_input.json` and `concluding_input.json`.
+- Use `--mode apply-dryrun` when you need submission-related fields populated.
