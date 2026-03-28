@@ -19,6 +19,7 @@ FieldType = Literal[
 	"date",
 	"file",
 	"hidden",
+	"unknown",
 ]
 
 FillAction = Literal["fill", "skip", "human_review"]
@@ -51,6 +52,8 @@ class ExtractedField(BaseModel):
 	required: bool
 	options: list[str] = Field(default_factory=list)
 	prefilled_value: str = ""
+	aria_role: str = ""
+	extraction_source: Literal["dom", "shadow_dom"] = "dom"
 
 
 class FillInstruction(BaseModel):
@@ -76,6 +79,8 @@ class FieldOutcome(BaseModel):
 	value_used: str | None = None
 	status: FieldStatus
 	error_message: str | None = None
+	strategy_used: str | None = None
+	failure_bundle_path: str | None = None
 
 
 class ExecutionResult(BaseModel):

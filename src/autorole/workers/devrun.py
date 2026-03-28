@@ -86,7 +86,7 @@ def _build_message(
     stage: str,
     mode: str,
 ) -> Message:
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = {"run_mode": mode}
     if stage == "form_submission" and mode == "apply-dryrun":
         metadata["dryrun_stop_after_submit"] = True
     return Message(

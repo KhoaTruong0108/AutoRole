@@ -87,357 +87,412 @@
     "page_label": "Application form",
     "extracted_fields": [
       {
-        "id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='first_name'], [id='first_name']",
+        "selector": "[aria-label=\"First Name\"], [id=\"first_name\"]",
         "label": "First Name",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "id": "528e7973-e55b-55e7-b71d-38b334712979",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='last_name'], [id='last_name']",
+        "selector": "[aria-label=\"Last Name\"], [id=\"last_name\"]",
         "label": "Last Name",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='email'], [id='email']",
+        "selector": "[aria-label=\"Email\"], [id=\"email\"]",
         "label": "Email",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='country'], [id='country']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Country*\"], [id=\"country\"]",
         "label": "Country*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_4'], [id='field_4']",
+        "selector": "body",
         "label": "field_4",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "id": "f55bf017-de32-5615-9834-f3013f8f3073",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='iti-0__search-input'], [id='iti-0__search-input']",
-        "label": "Search",
-        "required": false,
-        "options": [],
-        "prefilled_value": ""
-      },
-      {
-        "id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
-        "run_id": "earnin_7440771",
-        "page_index": 0,
-        "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='phone'], [id='phone']",
+        "selector": "[aria-label=\"Phone\"], [id=\"phone\"]",
         "label": "Phone",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "id": "ac691e3c-394d-516d-9383-0e3a781ba589",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='candidate-location'], [id='candidate-location']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Location (City)*\"], [id=\"candidate-location\"]",
         "label": "Location (City)*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "id": "1c15c79f-5671-58b6-8e97-b7bdac3fdf4e",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_8'], [id='field_8']",
-        "label": "field_8",
+        "selector": "body",
+        "label": "field_7",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "id": "b80af6b7-b175-5684-b232-e043f0217509",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "file",
-        "selector": "[name='resume'], [id='resume']",
+        "selector": "[aria-label=\"Attach\"], [id=\"resume\"]",
         "label": "Attach",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "file",
-        "selector": "[name='cover_letter'], [id='cover_letter']",
+        "selector": "[aria-label=\"Attach\"], [id=\"cover_letter\"]",
         "label": "Attach",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878059'], [id='question_61878059']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Are you legally authorized to work in the country that this role is based?*\"], [id=\"question_61878059\"]",
         "label": "Are you legally authorized to work in the country that this role is based?*",
         "required": true,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_12'], [id='field_12']",
-        "label": "field_12",
+        "selector": "body",
+        "label": "field_11",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878060'], [id='question_61878060']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*\"], [id=\"question_61878060\"]",
         "label": "Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*",
         "required": true,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "id": "d7e329be-561a-5b26-8312-82ebcc744cc5",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_14'], [id='field_14']",
-        "label": "field_14",
+        "selector": "body",
+        "label": "field_13",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878061'], [id='question_61878061']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"What is your preferred pronoun?\"], [id=\"question_61878061\"]",
         "label": "What is your preferred pronoun?",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878062'], [id='question_61878062']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Have you previously applied to a role at EarnIn?*\"], [id=\"question_61878062\"]",
         "label": "Have you previously applied to a role at EarnIn?*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "id": "b8375f67-a29b-58f0-a193-8eab417992ae",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_17'], [id='field_17']",
-        "label": "field_17",
+        "selector": "body",
+        "label": "field_16",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='question_61878063'], [id='question_61878063']",
+        "selector": "[aria-label=\"What is your primary mailing address?\"], [id=\"question_61878063\"]",
         "label": "What is your primary mailing address?",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='question_61878064'], [id='question_61878064']",
+        "selector": "[aria-label=\"LinkedIn Profile\"], [id=\"question_61878064\"]",
         "label": "LinkedIn Profile",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878065'], [id='question_61878065']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*\"], [id=\"question_61878065\"]",
         "label": "The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_21'], [id='field_21']",
-        "label": "field_21",
+        "selector": "body",
+        "label": "field_20",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_64700572'], [id='question_64700572']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*\"], [id=\"question_64700572\"]",
         "label": "Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "id": "adf65aca-e160-5702-913a-e6878bcae28a",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_23'], [id='field_23']",
-        "label": "field_23",
+        "selector": "body",
+        "label": "field_22",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='gender'], [id='gender']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Gender\"], [id=\"gender\"]",
         "label": "Gender",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Male",
+          "Female",
+          "Non-binary",
+          "Other",
+          "I don't wish to answer",
+          "Decline to self-identify"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='hispanic_ethnicity'], [id='hispanic_ethnicity']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Are you Hispanic/Latino?\"], [id=\"hispanic_ethnicity\"]",
         "label": "Are you Hispanic/Latino?",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='veteran_status'], [id='veteran_status']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Veteran Status\"], [id=\"veteran_status\"]",
         "label": "Veteran Status",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "I am not a protected veteran",
+          "I identify as one or more of the classifications of a protected veteran",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "id": "40725305-b655-5c95-9d8a-61c5491a29d5",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='disability_status'], [id='disability_status']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Disability Status\"], [id=\"disability_status\"]",
         "label": "Disability Status",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
-      },
-      {
-        "id": "c460a77c-b3d2-535c-879e-b492e6d92193",
-        "run_id": "earnin_7440771",
-        "page_index": 0,
-        "page_label": "Application form",
-        "field_type": "textarea",
-        "selector": "[name='g-recaptcha-response'], [id='g-recaptcha-response']",
-        "label": "g-recaptcha-response",
-        "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes, I have a disability, or have had one in the past",
+          "No, I don't have a disability and haven't had one in the past",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       }
     ],
     "fill_instructions": [
       {
-        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "field_id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "Alex",
@@ -445,7 +500,7 @@
         "page_index": 0
       },
       {
-        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "field_id": "528e7973-e55b-55e7-b71d-38b334712979",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "Nguyen",
@@ -453,7 +508,7 @@
         "page_index": 0
       },
       {
-        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "field_id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "alex.nguyen.dev@example.com",
@@ -461,7 +516,7 @@
         "page_index": 0
       },
       {
-        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "field_id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "United States",
@@ -469,7 +524,7 @@
         "page_index": 0
       },
       {
-        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "field_id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -477,15 +532,7 @@
         "page_index": 0
       },
       {
-        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "field_id": "f55bf017-de32-5615-9834-f3013f8f3073",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "+1-415-555-0188",
@@ -493,7 +540,7 @@
         "page_index": 0
       },
       {
-        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "field_id": "ac691e3c-394d-516d-9383-0e3a781ba589",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "San Francisco, CA",
@@ -501,7 +548,7 @@
         "page_index": 0
       },
       {
-        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "field_id": "1c15c79f-5671-58b6-8e97-b7bdac3fdf4e",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -509,15 +556,7 @@
         "page_index": 0
       },
       {
-        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "field_id": "b80af6b7-b175-5684-b232-e043f0217509",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -525,7 +564,23 @@
         "page_index": 0
       },
       {
-        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "field_id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
+        "run_id": "earnin_7440771",
+        "action": "skip",
+        "value": null,
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Yes",
+        "source": "profile_inferred",
+        "page_index": 0
+      },
+      {
+        "field_id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -533,7 +588,15 @@
         "page_index": 0
       },
       {
-        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "field_id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Yes",
+        "source": "profile_inferred",
+        "page_index": 0
+      },
+      {
+        "field_id": "d7e329be-561a-5b26-8312-82ebcc744cc5",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -541,63 +604,23 @@
         "page_index": 0
       },
       {
-        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "no",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "field_id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "he/him",
-        "source": "no_match",
+        "source": "profile_direct",
         "page_index": 0
       },
       {
-        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "field_id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
         "run_id": "earnin_7440771",
         "action": "fill",
-        "value": "no",
-        "source": "no_match",
+        "value": "N/A",
+        "source": "generated",
         "page_index": 0
       },
       {
-        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "245 Mission Street, San Francisco, CA 94105",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "https://www.linkedin.com/in/alex-nguyen-dev",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "field_id": "b8375f67-a29b-58f0-a193-8eab417992ae",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -605,31 +628,15 @@
         "page_index": 0
       },
       {
-        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "field_id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
         "run_id": "earnin_7440771",
         "action": "fill",
-        "value": "",
-        "source": "no_match",
+        "value": "245 Mission Street, Apt 1204\nSan Francisco, CA 94105",
+        "source": "generated",
         "page_index": 0
       },
       {
-        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "yes",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "field_id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -637,7 +644,39 @@
         "page_index": 0
       },
       {
-        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "field_id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "N/A",
+        "source": "generated",
+        "page_index": 0
+      },
+      {
+        "field_id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "N/A",
+        "source": "generated",
+        "page_index": 0
+      },
+      {
+        "field_id": "adf65aca-e160-5702-913a-e6878bcae28a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -645,15 +684,15 @@
         "page_index": 0
       },
       {
-        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "field_id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
         "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
+        "action": "fill",
+        "value": "",
         "source": "no_match",
         "page_index": 0
       },
       {
-        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "field_id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -661,7 +700,7 @@
         "page_index": 0
       }
     ],
-    "generated_at": "2026-03-27T01:21:38.489004Z",
+    "generated_at": "2026-03-27T23:10:57.770137Z",
     "questionnaire": [],
     "form_json_filled": {}
   },
@@ -676,357 +715,412 @@
     "page_index": 0,
     "all_fields": [
       {
-        "id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='first_name'], [id='first_name']",
+        "selector": "[aria-label=\"First Name\"], [id=\"first_name\"]",
         "label": "First Name",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "id": "528e7973-e55b-55e7-b71d-38b334712979",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='last_name'], [id='last_name']",
+        "selector": "[aria-label=\"Last Name\"], [id=\"last_name\"]",
         "label": "Last Name",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='email'], [id='email']",
+        "selector": "[aria-label=\"Email\"], [id=\"email\"]",
         "label": "Email",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='country'], [id='country']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Country*\"], [id=\"country\"]",
         "label": "Country*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_4'], [id='field_4']",
+        "selector": "body",
         "label": "field_4",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
+        "id": "f55bf017-de32-5615-9834-f3013f8f3073",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='iti-0__search-input'], [id='iti-0__search-input']",
-        "label": "Search",
-        "required": false,
-        "options": [],
-        "prefilled_value": ""
-      },
-      {
-        "id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
-        "run_id": "earnin_7440771",
-        "page_index": 0,
-        "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='phone'], [id='phone']",
+        "selector": "[aria-label=\"Phone\"], [id=\"phone\"]",
         "label": "Phone",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "id": "ac691e3c-394d-516d-9383-0e3a781ba589",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='candidate-location'], [id='candidate-location']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Location (City)*\"], [id=\"candidate-location\"]",
         "label": "Location (City)*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "id": "1c15c79f-5671-58b6-8e97-b7bdac3fdf4e",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_8'], [id='field_8']",
-        "label": "field_8",
+        "selector": "body",
+        "label": "field_7",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "id": "b80af6b7-b175-5684-b232-e043f0217509",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "file",
-        "selector": "[name='resume'], [id='resume']",
+        "selector": "[aria-label=\"Attach\"], [id=\"resume\"]",
         "label": "Attach",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "file",
-        "selector": "[name='cover_letter'], [id='cover_letter']",
+        "selector": "[aria-label=\"Attach\"], [id=\"cover_letter\"]",
         "label": "Attach",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878059'], [id='question_61878059']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Are you legally authorized to work in the country that this role is based?*\"], [id=\"question_61878059\"]",
         "label": "Are you legally authorized to work in the country that this role is based?*",
         "required": true,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "838c55b8-69e1-5e78-a143-58502433339a",
+        "id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_12'], [id='field_12']",
-        "label": "field_12",
+        "selector": "body",
+        "label": "field_11",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878060'], [id='question_61878060']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*\"], [id=\"question_61878060\"]",
         "label": "Do you need, or will you need in the future, any immigration-related support or sponsorship from EarnIn in order to begin or continue employment with EarnIn?*",
         "required": true,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "id": "d7e329be-561a-5b26-8312-82ebcc744cc5",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_14'], [id='field_14']",
-        "label": "field_14",
+        "selector": "body",
+        "label": "field_13",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878061'], [id='question_61878061']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"What is your preferred pronoun?\"], [id=\"question_61878061\"]",
         "label": "What is your preferred pronoun?",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878062'], [id='question_61878062']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Have you previously applied to a role at EarnIn?*\"], [id=\"question_61878062\"]",
         "label": "Have you previously applied to a role at EarnIn?*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "id": "b8375f67-a29b-58f0-a193-8eab417992ae",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_17'], [id='field_17']",
-        "label": "field_17",
+        "selector": "body",
+        "label": "field_16",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
+        "id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='question_61878063'], [id='question_61878063']",
+        "selector": "[aria-label=\"What is your primary mailing address?\"], [id=\"question_61878063\"]",
         "label": "What is your primary mailing address?",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
+        "id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='question_61878064'], [id='question_61878064']",
+        "selector": "[aria-label=\"LinkedIn Profile\"], [id=\"question_61878064\"]",
         "label": "LinkedIn Profile",
         "required": false,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
+        "id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_61878065'], [id='question_61878065']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*\"], [id=\"question_61878065\"]",
         "label": "The interview may be recorded in various formats, including audio, video, and/or transcript, and reviewed by EarnIn\u2019s hiring team for internal evaluation purposes only. These recordings will not be shared outside the company and will be securely stored and deleted in accordance with EarnIn\u2019s Records Retention Policy.*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
+        "id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_21'], [id='field_21']",
-        "label": "field_21",
+        "selector": "body",
+        "label": "field_20",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
+        "id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='question_64700572'], [id='question_64700572']",
+        "field_type": "combobox_search",
+        "selector": "[aria-label=\"Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*\"], [id=\"question_64700572\"]",
         "label": "Do you have at least 6 months of experience using AI-assisted development tools (e.g., GitHub Copilot, Cursor, ChatGPT, or similar tools) as part of your software development workflow?*",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
+        "id": "adf65aca-e160-5702-913a-e6878bcae28a",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
         "field_type": "text",
-        "selector": "[name='field_23'], [id='field_23']",
-        "label": "field_23",
+        "selector": "body",
+        "label": "field_22",
         "required": true,
         "options": [],
-        "prefilled_value": ""
+        "prefilled_value": "",
+        "aria_role": "",
+        "extraction_source": "dom"
       },
       {
-        "id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='gender'], [id='gender']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Gender\"], [id=\"gender\"]",
         "label": "Gender",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Male",
+          "Female",
+          "Non-binary",
+          "Other",
+          "I don't wish to answer",
+          "Decline to self-identify"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='hispanic_ethnicity'], [id='hispanic_ethnicity']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Are you Hispanic/Latino?\"], [id=\"hispanic_ethnicity\"]",
         "label": "Are you Hispanic/Latino?",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes",
+          "No",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='veteran_status'], [id='veteran_status']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Veteran Status\"], [id=\"veteran_status\"]",
         "label": "Veteran Status",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "I am not a protected veteran",
+          "I identify as one or more of the classifications of a protected veteran",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       },
       {
-        "id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "id": "40725305-b655-5c95-9d8a-61c5491a29d5",
         "run_id": "earnin_7440771",
         "page_index": 0,
         "page_label": "Application form",
-        "field_type": "text",
-        "selector": "[name='disability_status'], [id='disability_status']",
+        "field_type": "combobox_lazy",
+        "selector": "[aria-label=\"Disability Status\"], [id=\"disability_status\"]",
         "label": "Disability Status",
         "required": false,
-        "options": [],
-        "prefilled_value": ""
-      },
-      {
-        "id": "c460a77c-b3d2-535c-879e-b492e6d92193",
-        "run_id": "earnin_7440771",
-        "page_index": 0,
-        "page_label": "Application form",
-        "field_type": "textarea",
-        "selector": "[name='g-recaptcha-response'], [id='g-recaptcha-response']",
-        "label": "g-recaptcha-response",
-        "required": false,
-        "options": [],
-        "prefilled_value": ""
+        "options": [
+          "Yes, I have a disability, or have had one in the past",
+          "No, I don't have a disability and haven't had one in the past",
+          "I don't wish to answer"
+        ],
+        "prefilled_value": "",
+        "aria_role": "combobox",
+        "extraction_source": "dom"
       }
     ],
     "all_instructions": [
       {
-        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
+        "field_id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "Alex",
@@ -1034,7 +1128,7 @@
         "page_index": 0
       },
       {
-        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
+        "field_id": "528e7973-e55b-55e7-b71d-38b334712979",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "Nguyen",
@@ -1042,7 +1136,7 @@
         "page_index": 0
       },
       {
-        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
+        "field_id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "alex.nguyen.dev@example.com",
@@ -1050,7 +1144,7 @@
         "page_index": 0
       },
       {
-        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
+        "field_id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "United States",
@@ -1058,7 +1152,7 @@
         "page_index": 0
       },
       {
-        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
+        "field_id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -1066,15 +1160,7 @@
         "page_index": 0
       },
       {
-        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
+        "field_id": "f55bf017-de32-5615-9834-f3013f8f3073",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "+1-415-555-0188",
@@ -1082,7 +1168,7 @@
         "page_index": 0
       },
       {
-        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
+        "field_id": "ac691e3c-394d-516d-9383-0e3a781ba589",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "San Francisco, CA",
@@ -1090,7 +1176,7 @@
         "page_index": 0
       },
       {
-        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
+        "field_id": "1c15c79f-5671-58b6-8e97-b7bdac3fdf4e",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -1098,7 +1184,7 @@
         "page_index": 0
       },
       {
-        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
+        "field_id": "b80af6b7-b175-5684-b232-e043f0217509",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -1106,7 +1192,7 @@
         "page_index": 0
       },
       {
-        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
+        "field_id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -1114,23 +1200,15 @@
         "page_index": 0
       },
       {
-        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
+        "field_id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
         "run_id": "earnin_7440771",
         "action": "fill",
-        "value": "yes",
-        "source": "no_match",
+        "value": "Yes",
+        "source": "profile_inferred",
         "page_index": 0
       },
       {
-        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
+        "field_id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -1138,7 +1216,15 @@
         "page_index": 0
       },
       {
-        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
+        "field_id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "Yes",
+        "source": "profile_inferred",
+        "page_index": 0
+      },
+      {
+        "field_id": "d7e329be-561a-5b26-8312-82ebcc744cc5",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -1146,15 +1232,23 @@
         "page_index": 0
       },
       {
-        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
+        "field_id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
         "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": "null",
-        "source": "no_match",
+        "action": "fill",
+        "value": "he/him",
+        "source": "profile_direct",
         "page_index": 0
       },
       {
-        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
+        "field_id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "N/A",
+        "source": "generated",
+        "page_index": 0
+      },
+      {
+        "field_id": "b8375f67-a29b-58f0-a193-8eab417992ae",
         "run_id": "earnin_7440771",
         "action": "fill",
         "value": "",
@@ -1162,63 +1256,15 @@
         "page_index": 0
       },
       {
-        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
+        "field_id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
         "run_id": "earnin_7440771",
         "action": "fill",
-        "value": "",
-        "source": "no_match",
+        "value": "245 Mission Street, Apt 1204\nSan Francisco, CA 94105",
+        "source": "generated",
         "page_index": 0
       },
       {
-        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "I understand",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
+        "field_id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -1226,7 +1272,39 @@
         "page_index": 0
       },
       {
-        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
+        "field_id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "N/A",
+        "source": "generated",
+        "page_index": 0
+      },
+      {
+        "field_id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "N/A",
+        "source": "generated",
+        "page_index": 0
+      },
+      {
+        "field_id": "adf65aca-e160-5702-913a-e6878bcae28a",
+        "run_id": "earnin_7440771",
+        "action": "fill",
+        "value": "",
+        "source": "no_match",
+        "page_index": 0
+      },
+      {
+        "field_id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -1234,15 +1312,15 @@
         "page_index": 0
       },
       {
-        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
+        "field_id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
         "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
+        "action": "fill",
+        "value": "",
         "source": "no_match",
         "page_index": 0
       },
       {
-        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
+        "field_id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
         "run_id": "earnin_7440771",
         "action": "skip",
         "value": null,
@@ -1250,215 +1328,9 @@
         "page_index": 0
       }
     ],
-    "all_outcomes": [
-      {
-        "field_id": "aad26514-871f-58b0-bc04-03e6392cb73c",
-        "action_taken": "fill",
-        "value_used": "Alex",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "34e0fb5d-801b-570d-a154-4ca8cbfcef3f",
-        "action_taken": "fill",
-        "value_used": "Nguyen",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "fd042b69-a354-55be-b0c2-535634846b6e",
-        "action_taken": "fill",
-        "value_used": "alex.nguyen.dev@example.com",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "4176f7c5-676c-5b68-af19-7ddfd943e497",
-        "action_taken": "fill",
-        "value_used": "United States",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "ecda752e-4565-57dc-ab33-8cd3f39c9ab5",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "fd87be76-4946-5f1a-8382-f9a66712ec63",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "bd627e72-0f49-5df7-90dd-a949b417f1a3",
-        "action_taken": "fill",
-        "value_used": "+1-415-555-0188",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "39460b7f-cf2c-52cb-afda-376cda86ba92",
-        "action_taken": "fill",
-        "value_used": "San Francisco, CA",
-        "status": "ok",
-        "error_message": null
-      },
-      {
-        "field_id": "54dff2a5-9e85-5884-96d7-ffb2f0c8ce78",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "d94230d4-6f2a-52a3-993e-0dc215a8b155",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "ff91ceff-cd48-51a5-93f4-97e776665d34",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "a25e3767-04b6-56b0-a3c9-3e591300a37f",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "838c55b8-69e1-5e78-a143-58502433339a",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "c74a2e9c-8170-5cfd-b424-1fc1909aca84",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "e2abe378-fb3c-5433-b3ec-1974a4044797",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "7992d9f9-0dcc-5b98-9b23-11c30df6fc00",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "1d165c6e-0877-5b7e-acea-2b18126154fc",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "3292e67f-aeba-5fb2-a822-0b0d835ab95d",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "65277d35-dff5-5d4c-a854-5a65accc36cc",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "18b8961b-34d5-5c4f-8ca3-4ffac861e4c9",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "cd3a4e96-c7f4-5e48-bed9-49cb59bdd428",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "5fd9b05d-fbc3-5810-9277-07f15efd05f0",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "2b85f3d5-155a-55e2-944b-9e2c0872d4f4",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "767a2da3-baa9-54df-9e69-24a3ef77a38a",
-        "action_taken": "fill",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "35f190f9-27d2-55b6-a981-bed070219043",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "2ebcb96e-2dbb-5cd7-aabb-b36e0b89c615",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "9b72901d-6017-5f51-987d-156909e70f14",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "b41856a9-2ad0-5905-867e-710b2de633ab",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      },
-      {
-        "field_id": "c460a77c-b3d2-535c-879e-b492e6d92193",
-        "action_taken": "skip",
-        "value_used": null,
-        "status": "skipped",
-        "error_message": null
-      }
-    ],
-    "last_advance_action": "done",
-    "screenshots": [
-      "logs/earnin_7440771/page_0_Application_form.png"
-    ]
+    "all_outcomes": [],
+    "last_advance_action": "next_page",
+    "screenshots": []
   },
   "applied": null
 }

@@ -158,8 +158,9 @@ class FormIntelligenceStage(Stage):
 		adapter = get_adapter(form_session.detection.platform_id)
 		page_section = await adapter.get_current_page_section(self._page)
 
+		platform_id = form_session.detection.platform_id
 		try:
-			fields = await self._extractor.extract(page_section, message.run_id, page_index)
+			fields = await self._extractor.extract(page_section, message.run_id, page_index, platform_id)
 		except Exception as exc:
 			return StageResult.fail(f"Field extraction failed: {exc}", "ExtractionError")
 		if len(fields) == 0:
@@ -170,6 +171,7 @@ class FormIntelligenceStage(Stage):
 					PageSection(label=page_section.label, root="body"),
 					message.run_id,
 					page_index,
+					platform_id,
 				)
 			except Exception as exc:
 				return StageResult.fail(f"Field extraction retry failed: {exc}", "ExtractionError")

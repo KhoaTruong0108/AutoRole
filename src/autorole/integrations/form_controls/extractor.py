@@ -4,8 +4,108 @@ import uuid
 
 from autorole.integrations.form_controls.models import ExtractedField, FieldType
 
+# ---------------------------------------------------------------------------
+# Strategy B — static option catalog for known platform EEO / consent fields.
+# Keys are lowercase substrings matched against the normalized field label.
+# ---------------------------------------------------------------------------
+_PLATFORM_OPTION_CATALOG: dict[str, dict[str, list[str]]] = {
+    "greenhouse": {
+        "gender": [
+            "Male",
+            "Female",
+            "Non-binary",
+            "Other",
+            "I don't wish to answer",
+            "Decline to self-identify",
+        ],
+        "race": [
+            "American Indian or Alaskan Native",
+            "Asian",
+            "Black or African American",
+            "Hispanic or Latino",
+            "White",
+            "Native Hawaiian or Other Pacific Islander",
+            "Two or more races",
+            "I don't wish to answer",
+            "Decline to self-identify",
+        ],
+        "veteran": [
+            "I am not a protected veteran",
+            "I identify as one or more of the classifications of a protected veteran",
+            "I don't wish to answer",
+        ],
+        "disability": [
+            "Yes, I have a disability, or have had one in the past",
+            "No, I don't have a disability and haven't had one in the past",
+            "I don't wish to answer",
+        ],
+        "hispanic": ["Yes", "No", "I don't wish to answer"],
+        "authorized": ["Yes", "No"],
+        "sponsorship": ["Yes", "No"],
+        "require": ["Yes", "No"],
+    },
+}
 
-def _classify_field_type(tag: str, input_type: str) -> FieldType:
+
+def _seed_options_from_catalog(label: str, platform_id: str) -> list[str]:
+    """Return known options for the field from the static catalog, or [] if no match."""
+    catalog = _PLATFORM_OPTION_CATALOG.get(platform_id)
+    if not catalog:
+        return []
+    normalized = label.lower().strip()
+    for keyword, options in catalog.items():
+        if keyword in normalized:
+            return list(options)
+    return []
+
+
+async def _load_lazy_options(page: object, field: ExtractedField) -> list[str]:
+    """
+    Strategy A — open the combobox, read rendered options, Escape to close.
+    Returns [] on any failure; never raises.
+    """
+    try:
+        loc = page.locator(field.selector).first  # type: ignore[union-attr]
+        if hasattr(loc, "scroll_into_view_if_needed"):
+            await loc.scroll_into_view_if_needed(timeout=2_000)
+        await loc.click(timeout=3_000)
+        await page.wait_for_selector(  # type: ignore[union-attr]
+            '[role="option"], [role="listbox"] [role="option"]',
+            timeout=2_000,
+        )
+        texts: list[str] = await page.locator('[role="option"]').all_text_contents()  # type: ignore[union-attr]
+        await page.keyboard.press("Escape")  # type: ignore[union-attr]
+        if hasattr(page, "wait_for_timeout"):
+            await page.wait_for_timeout(150)  # type: ignore[union-attr]
+        return [t.strip() for t in texts if t.strip()]
+    except Exception:
+        return []
+
+
+_ARIA_ROLE_MAP: dict[str, FieldType] = {
+	"combobox": "combobox_search",
+	"listbox": "select",
+	"radio": "radio",
+	"checkbox": "checkbox",
+	"switch": "checkbox",
+	"spinbutton": "text",
+	"searchbox": "text",
+	"textbox": "text",
+}
+
+
+def _classify_field_type(
+	tag: str,
+	input_type: str,
+	aria_role: str = "",
+	contenteditable: bool = False,
+) -> FieldType:
+	if aria_role:
+		if aria_role in _ARIA_ROLE_MAP:
+			return _ARIA_ROLE_MAP[aria_role]
+		return "unknown"
+	if contenteditable:
+		return "textarea"
 	if tag == "textarea":
 		return "textarea"
 	if tag == "select":
@@ -23,59 +123,168 @@ def _classify_field_type(tag: str, input_type: str) -> FieldType:
 	return "text"
 
 
+def _build_selector(
+	name: str,
+	id_: str,
+	label: str,
+	data_automation_id: str,
+	data_testid: str,
+) -> str:
+	parts: list[str] = []
+	if data_automation_id:
+		parts.append(f'[data-automation-id="{data_automation_id}"]')
+	if data_testid:
+		parts.append(f'[data-testid="{data_testid}"]')
+	if label and not label.startswith("field_"):
+		escaped = label.replace('"', '\\"')
+		parts.append(f'[aria-label="{escaped}"]')
+	if name:
+		parts.append(f'[name="{name}"]')
+	if id_:
+		parts.append(f'[id="{id_}"]')
+	return ", ".join(parts) if parts else "body"
+
+
 class SemanticFieldExtractor:
 	def __init__(self, page: object) -> None:
 		self._page = page
 
-	async def extract(self, page_section: object, run_id: str, page_index: int) -> list[ExtractedField]:
+	async def extract(
+		self,
+		page_section: object,
+		run_id: str,
+		page_index: int,
+		platform_id: str = "",
+	) -> list[ExtractedField]:
 		if not hasattr(self._page, "locator"):
 			return []
 
 		root_selector = getattr(page_section, "root", "body")
 		page_label = getattr(page_section, "label", f"Page {page_index}")
 		root = self._page.locator(root_selector)
+		try:
+			if await root.count() == 0 and root_selector != "body":
+				root = self._page.locator("body")
+			if await root.count() == 0:
+				return []
+			root_handle = await root.evaluate_handle("el => el")
+		except Exception:
+			return []
 
-		raw_fields = await root.locator("input, select, textarea").evaluate_all(
+		raw_fields = await self._page.evaluate(
 			"""
-			els => els.map((el, i) => {
-			  const tag = (el.tagName || '').toLowerCase();
-			  const type = ((el.getAttribute('type') || '') + '').toLowerCase();
-			  const name = el.getAttribute('name') || '';
-			  const id = el.id || '';
-			  const label = el.getAttribute('aria-label') ||
-			    (el.labels && el.labels.length ? (el.labels[0].textContent || '').trim() : '') ||
-			    el.getAttribute('placeholder') ||
-			    name || id || `field_${i}`;
-			  const required = el.required || el.getAttribute('aria-required') === 'true';
-			  let options = [];
-			  if (tag === 'select') {
-			    options = Array.from(el.options || []).map(o => (o.textContent || '').trim()).filter(Boolean);
+			rootEl => {
+			  const INTERACTIVE = [
+			    'input:not([type="hidden"])',
+			    'select',
+			    'textarea',
+			    '[role="combobox"]',
+			    '[role="listbox"]',
+			    '[role="radio"]',
+			    '[role="checkbox"]',
+			    '[role="spinbutton"]',
+			    '[role="searchbox"]',
+			    '[role="textbox"]',
+			    '[role="switch"]',
+			    '[contenteditable="true"]',
+			  ].join(', ');
+
+			  function collectElements(rootNode, fromShadow) {
+			    const results = [];
+			    rootNode.querySelectorAll(INTERACTIVE).forEach(el => results.push({ el, fromShadow }));
+			    rootNode.querySelectorAll('*').forEach(el => {
+			      if (el.shadowRoot) {
+			        collectElements(el.shadowRoot, true).forEach(r => results.push(r));
+			      }
+			    });
+			    return results;
 			  }
-			  let prefilled = '';
-			  if (tag === 'select') {
-			    prefilled = (el.selectedOptions && el.selectedOptions[0] && (el.selectedOptions[0].textContent || '').trim()) || '';
-			  } else if (type === 'checkbox' || type === 'radio') {
-			    prefilled = el.checked ? (el.value || 'true') : '';
-			  } else {
-			    prefilled = (el.value || '').trim();
-			  }
-			  return { tag, type, name, id, label, required, options, prefilled, idx: i };
-			})
-			"""
+
+			  return collectElements(rootEl, false).map(({ el, fromShadow }, i) => {
+			    const tag = (el.tagName || '').toLowerCase();
+			    const type = (el.getAttribute('type') || '').toLowerCase();
+			    const role = el.getAttribute('role') || '';
+			    const name = el.getAttribute('name') || '';
+			    const id = el.id || '';
+			    const dataAutomationId = el.getAttribute('data-automation-id') || '';
+			    const dataTestId = el.getAttribute('data-testid') || '';
+			    const contentEditable = el.getAttribute('contenteditable') === 'true';
+			    const label =
+			      el.getAttribute('aria-label') ||
+			      (el.labels?.[0]?.textContent?.trim()) ||
+			      el.getAttribute('placeholder') ||
+			      dataAutomationId ||
+			      name || id || `field_${i}`;
+			    const required = el.required || el.getAttribute('aria-required') === 'true';
+			    let options = [];
+			    if (tag === 'select') {
+			      options = Array.from(el.options || []).map(o => o.textContent.trim()).filter(Boolean);
+			    }
+			    let prefilled = '';
+			    if (tag === 'select') prefilled = el.selectedOptions?.[0]?.textContent?.trim() || '';
+			    else if (type === 'checkbox' || type === 'radio') prefilled = el.checked ? (el.value || 'true') : '';
+			    else prefilled = (el.value || el.textContent || '').trim();
+			    return {
+			      tag,
+			      type,
+			      role,
+			      name,
+			      id,
+			      dataAutomationId,
+			      dataTestId,
+			      contentEditable,
+			      label,
+			      required,
+			      options,
+			      prefilled,
+			      fromShadow,
+			      idx: i,
+			    };
+			  });
+			}
+			""",
+			root_handle,
 		)
+		if hasattr(root_handle, "dispose"):
+			await root_handle.dispose()
 
-		fields: list[ExtractedField] = []
+		# Deduplicate by stable DOM identity. If duplicate exists, prefer shadow-origin entries.
+		by_key: dict[tuple[str, str, str], dict[str, object]] = {}
+		ordered_items: list[dict[str, object]] = []
 		for item in raw_fields:
 			name = str(item.get("name") or "").strip()
-			field_id_hint = name or str(item.get("id") or "").strip()
-			if not field_id_hint:
-				field_id_hint = f"field_{item.get('idx', len(fields))}"
+			id_ = str(item.get("id") or "").strip()
+			data_automation_id = str(item.get("dataAutomationId") or "").strip()
+			key = (name, id_, data_automation_id)
+			if key == ("", "", ""):
+				ordered_items.append(item)
+				continue
+			existing = by_key.get(key)
+			if existing is None:
+				by_key[key] = item
+				ordered_items.append(item)
+				continue
+			if bool(item.get("fromShadow", False)) and not bool(existing.get("fromShadow", False)):
+				by_key[key] = item
+				index = ordered_items.index(existing)
+				ordered_items[index] = item
 
+		fields: list[ExtractedField] = []
+		for item in ordered_items:
+			name = str(item.get("name") or "").strip()
+			id_ = str(item.get("id") or "").strip()
+			data_automation_id = str(item.get("dataAutomationId") or "").strip()
+			data_testid = str(item.get("dataTestId") or "").strip()
 			tag = str(item.get("tag") or "input").lower()
 			input_type = str(item.get("type") or "").lower()
-			field_type = _classify_field_type(tag, input_type)
+			aria_role = str(item.get("role") or "").lower()
+			contenteditable = bool(item.get("contentEditable", False))
+			from_shadow = bool(item.get("fromShadow", False))
 
-			selector = f"[name={field_id_hint!r}], [id={field_id_hint!r}]"
+			field_id_hint = name or id_ or data_automation_id or f"field_{item.get('idx', len(fields))}"
+			field_type = _classify_field_type(tag, input_type, aria_role, contenteditable)
+			selector = _build_selector(name, id_, str(item.get("label") or ""), data_automation_id, data_testid)
+
 			stable_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{run_id}:{page_index}:{field_id_hint}:{selector}"))
 			fields.append(
 				ExtractedField(
@@ -89,8 +298,34 @@ class SemanticFieldExtractor:
 					required=bool(item.get("required", False)),
 					options=[str(opt) for opt in item.get("options", [])],
 					prefilled_value=str(item.get("prefilled") or ""),
+					aria_role=aria_role,
+					extraction_source="shadow_dom" if from_shadow else "dom",
 				)
 			)
 
-		return fields
+		# Post-pass: enrich options for any combobox field that has none.
+		# All comboboxes arrive with role="combobox" → classified as combobox_search.
+		# We detect the true type by behavior: click reveals options immediately → lazy.
+		# Order: B (static catalog, free) → A (click-and-detect, browser interaction).
+		enriched: list[ExtractedField] = []
+		for field in fields:
+			if field.field_type not in ("combobox_lazy", "combobox_search") or field.options:
+				enriched.append(field)
+				continue
+
+			# Strategy B: static catalog match (fast, no browser interaction).
+			seeded = _seed_options_from_catalog(field.label, platform_id)
+			if seeded:
+				enriched.append(field.model_copy(update={"options": seeded, "field_type": "combobox_lazy"}))
+				continue
+
+			# Strategy A: click-and-detect. Options appear immediately → lazy; timeout → search.
+			loaded = await _load_lazy_options(self._page, field)
+			print(f"Extracted options for field '{field.label}': {loaded}")
+			if loaded:
+				enriched.append(field.model_copy(update={"options": loaded, "field_type": "combobox_lazy"}))
+			else:
+				enriched.append(field)  # confirmed combobox_search: options load only after typing
+
+		return enriched
 

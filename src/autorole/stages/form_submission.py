@@ -80,11 +80,19 @@ class FormSubmissionStage(Stage):
 		platform_id = ctx.form_session.detection.platform_id
 		adapter = get_adapter(platform_id)
 
-		outcomes = await self._executor.execute_page(self._page, fields, instructions)
-		failed_outcomes = [
+		outcomes = await self._executor.execute_page(
+			self._page,
+			fields,
+			instructions,
+			run_id=ctx.run_id,
+		)
+		field_map = {field.id: field for field in fields}
+		required_failures = [
 			outcome
 			for outcome in outcomes
 			if outcome.status in {"fill_error", "selector_not_found"}
+			and field_map.get(outcome.field_id, None) is not None
+			and field_map[outcome.field_id].required
 		]
 
 		file_input = await adapter.get_file_input(self._page)
@@ -100,11 +108,11 @@ class FormSubmissionStage(Stage):
 		if hasattr(self._page, "screenshot"):
 			await self._page.screenshot(path=screenshot_path)
 
-		if failed_outcomes:
-			failed_ids = ", ".join(outcome.field_id for outcome in failed_outcomes)
+		if required_failures:
+			failed_ids = ", ".join(outcome.field_id for outcome in required_failures)
 			return StageResult.fail(
-				f"Current page fill failed; refusing to advance. failing_field_ids=[{failed_ids}]",
-				"PageFillError",
+				f"Required field(s) could not be filled — refusing to advance. failing_field_ids=[{failed_ids}]",
+				"RequiredFieldFillError",
 			)
 
 		action = "done" if dryrun_skip_submit else await adapter.advance(self._page)

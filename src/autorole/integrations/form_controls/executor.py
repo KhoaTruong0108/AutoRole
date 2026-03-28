@@ -23,6 +23,7 @@ class FormExecutor:
 		page: object,
 		fields: list[ExtractedField],
 		instructions: list[FillInstruction],
+		run_id: str = "",
 	) -> list[FieldOutcome]:
 		instr_map = {inst.field_id: inst for inst in instructions}
 		outcomes: list[FieldOutcome] = []
@@ -42,7 +43,7 @@ class FormExecutor:
 				continue
 
 			try:
-				await _fill_field(page, field, inst.value)
+				strategy_name, _ = await _fill_field_with_fallback(page, field, inst.value)
 				outcomes.append(
 					FieldOutcome(
 						field_id=field.id,
@@ -50,9 +51,15 @@ class FormExecutor:
 						value_used=inst.value,
 						status="ok",
 						error_message=None,
+						strategy_used=strategy_name,
+						failure_bundle_path=None,
 					)
 				)
-			except Exception as exc:
+			except FillError as exc:
+				strategy_errors: list[str] = str(exc).splitlines()
+				bundle_path: str | None = None
+				if run_id:
+					bundle_path = await _capture_failure_bundle(page, field, inst, strategy_errors, run_id)
 				outcomes.append(
 					FieldOutcome(
 						field_id=field.id,
@@ -60,6 +67,8 @@ class FormExecutor:
 						value_used=inst.value,
 						status="fill_error",
 						error_message=str(exc),
+						strategy_used=None,
+						failure_bundle_path=bundle_path,
 					)
 				)
 
@@ -69,7 +78,7 @@ class FormExecutor:
 		return outcomes
 
 
-async def _fill_field(page: object, field: ExtractedField, value: str) -> None:
+async def _strategy_typed(page: object, field: ExtractedField, value: str) -> None:
 	if not hasattr(page, "locator"):
 		raise FillError("Page object does not support locator API")
 
@@ -146,6 +155,116 @@ async def _fill_field(page: object, field: ExtractedField, value: str) -> None:
 			return
 		case _:
 			raise FillError(f"Unsupported field type: {field.field_type}")
+
+
+async def _strategy_generic_fill(page: object, field: ExtractedField, value: str) -> None:
+	loc = page.locator(field.selector).first
+	await loc.wait_for(state="visible", timeout=5_000)
+	await loc.fill(value)
+
+
+async def _strategy_generic_type(page: object, field: ExtractedField, value: str) -> None:
+	loc = page.locator(field.selector).first
+	await loc.wait_for(state="visible", timeout=5_000)
+	await loc.click()
+	await loc.type(value, delay=30)
+
+
+async def _strategy_js_inject(page: object, field: ExtractedField, value: str) -> None:
+	loc = page.locator(field.selector).first
+	await loc.wait_for(state="visible", timeout=5_000)
+	await page.evaluate(
+		"""([sel, val]) => {
+			const el = document.querySelector(sel.split(',')[0].trim());
+			if (!el) throw new Error('element not found: ' + sel);
+			el.value = val;
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+			el.dispatchEvent(new Event('change', { bubbles: true }));
+		}""",
+		[field.selector, value],
+	)
+
+
+async def _strategy_contenteditable(page: object, field: ExtractedField, value: str) -> None:
+	loc = page.locator(field.selector).first
+	await loc.wait_for(state="visible", timeout=5_000)
+	await loc.click()
+	await page.keyboard.press("Control+A")
+	await page.keyboard.type(value)
+
+
+_FILL_STRATEGIES: list[tuple[str, object]] = [
+	("typed", _strategy_typed),
+	("generic_fill", _strategy_generic_fill),
+	("generic_type", _strategy_generic_type),
+	("js_value_inject", _strategy_js_inject),
+	("contenteditable_fill", _strategy_contenteditable),
+]
+
+
+async def _fill_field_with_fallback(
+	page: object,
+	field: ExtractedField,
+	value: str,
+) -> tuple[str, list[str]]:
+	"""Returns (strategy_used, per_strategy_errors). Raises FillError if all exhausted."""
+	errors: list[str] = []
+	for name, strategy in _FILL_STRATEGIES:
+		try:
+			await strategy(page, field, value)
+			return name, errors
+		except Exception as exc:
+			errors.append(f"{name}: {exc}")
+	raise FillError(
+		f"All strategies exhausted for field '{field.label}':\n" + "\n".join(errors)
+	)
+
+
+async def _capture_failure_bundle(
+	page: object,
+	field: ExtractedField,
+	instruction: FillInstruction,
+	errors: list[str],
+	run_id: str,
+) -> str:
+	import json as _json
+
+	bundle_dir = Path("logs") / run_id / "failures" / field.id
+	bundle_dir.mkdir(parents=True, exist_ok=True)
+
+	(bundle_dir / "field.json").write_text(
+		_json.dumps(
+			{
+				"field": field.model_dump(mode="json"),
+				"instruction": instruction.model_dump(mode="json"),
+				"errors": errors,
+			},
+			indent=2,
+		),
+		encoding="utf-8",
+	)
+
+	try:
+		ctx_html = await page.evaluate(
+			"""sel => {
+				const el = document.querySelector(sel.split(',')[0].trim());
+				if (!el) return '<element not found>';
+				let node = el;
+				for (let i = 0; i < 2 && node.parentElement; i++) node = node.parentElement;
+				return node.outerHTML;
+			}""",
+			field.selector,
+		)
+		(bundle_dir / "context.html").write_text(ctx_html, encoding="utf-8")
+	except Exception:
+		pass
+
+	try:
+		await page.screenshot(path=str(bundle_dir / "screenshot.png"), full_page=True)
+	except Exception:
+		pass
+
+	return str(bundle_dir)
 
 
 def _pick_top_option(suggestion: str, options: list[str]) -> str | None:

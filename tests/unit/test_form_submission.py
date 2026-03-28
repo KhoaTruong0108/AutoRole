@@ -83,7 +83,14 @@ class StubExecutor:
 		self.outcomes = outcomes
 		self.calls = 0
 
-	async def execute_page(self, _page: Any, _fields: Any, _instructions: Any) -> list[FieldOutcome]:
+	async def execute_page(
+		self,
+		_page: Any,
+		_fields: Any,
+		_instructions: Any,
+		run_id: str = "",
+	) -> list[FieldOutcome]:
+		_ = run_id
 		self.calls += 1
 		return self.outcomes
 

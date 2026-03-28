@@ -104,3 +104,30 @@ async def test_session_worker_unhandled_exception_nacks(repo, tmp_path):
     assert nacked is not None
     assert await queue.pull(FORM_INTEL_Q) is None
     assert await queue.pull(DEAD_LETTER_Q) is None
+
+
+@pytest.mark.asyncio
+async def test_session_worker_exports_fixture_in_apply_dryrun(repo, tmp_path):
+    input_fixture = load_fixture("session_input.json")
+    output_fixture = load_fixture("form_intelligence_input.json")
+
+    queue = InMemoryQueueBackend()
+    config = WorkerConfig(SESSION_Q, FORM_INTEL_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
+    worker = SessionWorker(
+        stage=MockStage(_result(True, output_fixture)),
+        repo=repo,
+        logger=logging.getLogger("test.session.fixture"),
+        artifacts_root=tmp_path,
+        config=config,
+    )
+
+    msg = make_worker_message(input_fixture, SESSION_Q, FORM_INTEL_Q)
+    msg.metadata["run_mode"] = "apply-dryrun"
+    await queue.enqueue(SESSION_Q, msg)
+    pulled = await queue.pull(SESSION_Q)
+    assert pulled is not None
+
+    await worker.process(queue, pulled)
+
+    fixture_path = tmp_path / input_fixture["run_id"] / "fixtures" / "form_intelligence_input.json"
+    assert fixture_path.exists()

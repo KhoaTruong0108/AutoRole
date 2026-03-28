@@ -47,6 +47,7 @@ class ExploringWorker(StageWorker):
             if context.listing is not None:
                 await self._repo.upsert_listing(context.listing, context.run_id)
             await self._repo.upsert_checkpoint(context.run_id, self.name, context.model_dump(mode="json"))
+            self._maybe_export_dryrun_fixture(context, msg)
 
             child = Message(
                 run_id=context.run_id,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -40,6 +41,17 @@ _NEXT_REPLY_QUEUE: dict[str, str] = {
     FORM_INTEL_Q: FORM_SUB_Q,
     FORM_SUB_Q: CONCLUDING_Q,
     CONCLUDING_Q: CONCLUDING_Q,
+}
+
+
+_DRYRUN_FIXTURE_BY_STAGE: dict[str, str] = {
+    "exploring": "qualification_input.json",
+    "qualification": "packaging_input.json",
+    "packaging": "session_input.json",
+    "session": "form_intelligence_input.json",
+    "form_intelligence": "form_submission_input.json",
+    "form_submission": "concluding_input.json",
+    "concluding": "concluding_output.json",
 }
 
 
@@ -143,6 +155,7 @@ class StageWorker(ABC):
             ctx = JobApplicationContext.model_validate(result.output)
             await self.on_success(ctx, msg.attempt)
             await self._repo.upsert_checkpoint(ctx.run_id, self.name, ctx.model_dump(mode="json"))
+            self._maybe_export_dryrun_fixture(ctx, msg)
             self.log_ok(ctx, msg.attempt)
             if self._on_pass is not None:
                 self._on_pass(ctx.run_id)
@@ -263,6 +276,29 @@ class StageWorker(ABC):
         rel_path = Path(self.name) / filename
         with index_path.open("a", encoding="utf-8") as handle:
             handle.write(f"- {self.name}: {rel_path}\\n")
+
+    def _is_apply_dryrun(self, msg: Message) -> bool:
+        mode = str(msg.metadata.get("run_mode", "")).strip().lower()
+        if mode == "apply-dryrun":
+            return True
+        return bool(msg.metadata.get("dryrun_stop_after_submit", False))
+
+    def _maybe_export_dryrun_fixture(self, ctx: JobApplicationContext, msg: Message) -> None:
+        if not self._is_apply_dryrun(msg):
+            return
+
+        fixture_name = _DRYRUN_FIXTURE_BY_STAGE.get(self.name)
+        if not fixture_name:
+            return
+
+        fixture_dir = self._artifacts_root / ctx.run_id / "fixtures"
+        fixture_dir.mkdir(parents=True, exist_ok=True)
+        out_path = fixture_dir / fixture_name
+        out_path.write_text(
+            json.dumps(ctx.model_dump(mode="json"), indent=2, ensure_ascii=True) + "\n",
+            encoding="utf-8",
+        )
+        self._logger.info("DRYRUN_FIXTURE_EXPORT stage=%s path=%s", self.name, out_path)
 
     @abstractmethod
     async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:

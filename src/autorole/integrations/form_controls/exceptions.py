@@ -21,6 +21,12 @@ class FillError(JobAutomationError):
 	pass
 
 
+class RequiredFieldFillError(JobAutomationError):
+	def __init__(self, msg: str, failed_field_ids: list[str] | None = None) -> None:
+		super().__init__(msg)
+		self.failed_field_ids: list[str] = failed_field_ids or []
+
+
 class SubmissionError(JobAutomationError):
 	def __init__(self, msg: str, errors: list[str] | None = None):
 		super().__init__(msg)

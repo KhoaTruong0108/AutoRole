@@ -329,6 +329,7 @@ class JobApplicationPipeline:
                             return 0
                         seed_metadata = {
                             "dryrun_stop_after_submit": rc.mode == "apply-dryrun",
+                            "run_mode": rc.mode,
                         }
                         seed_msg = _make_seed_message(
                             resume_ctx.run_id,
@@ -344,6 +345,7 @@ class JobApplicationPipeline:
                     else:
                         seed_metadata = {
                             "dryrun_stop_after_submit": rc.mode == "apply-dryrun",
+                            "run_mode": rc.mode,
                         }
                         seed_msg = _make_seed_message(
                             "seed",
