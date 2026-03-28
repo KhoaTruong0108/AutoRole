@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext, PackagedResume
+from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext, LLMFieldCompletionResult, PackagedResume
 from autorole.integrations.form_controls.exceptions import FillError
-from autorole.integrations.form_controls.executor import _capture_failure_bundle, _fill_field_with_fallback
+from autorole.integrations.form_controls.executor import _capture_failure_bundle, _fill_field_with_fallback, _strategy_typed
 from autorole.integrations.form_controls.models import DetectionResult, ExtractedField, FieldOutcome, FillInstruction
 from autorole.stages.form_submission import FormSubmissionStage
 from tests.conftest import SAMPLE_LISTING
@@ -33,6 +33,70 @@ class _GatePage:
 
 	async def screenshot(self, path: str) -> None:
 		self.screenshots.append(path)
+
+
+class _ComboboxLocator:
+	def __init__(self, page: "_ComboboxPage", selector: str) -> None:
+		self._page = page
+		self._selector = selector
+
+	@property
+	def first(self) -> "_ComboboxLocator":
+		return self
+
+	async def wait_for(self, **_kwargs: object) -> None:
+		return None
+
+	async def click(self, **_kwargs: object) -> None:
+		self._page.clicks.append(self._selector)
+		if self._selector in self._page.option_selectors:
+			self._page.selected_option = self._page.option_texts[self._selector]
+
+	async def fill(self, value: str) -> None:
+		self._page.fills.append((self._selector, value))
+
+	async def type(self, value: str, delay: int = 0) -> None:
+		_ = delay
+		self._page.typed.append((self._selector, value))
+
+	async def press(self, key: str) -> None:
+		self._page.presses.append((self._selector, key))
+
+	async def count(self) -> int:
+		if self._selector in self._page.option_selectors:
+			return 1
+		if self._selector == self._page.field_selector:
+			return 1
+		return 0
+
+
+class _KeyboardPage:
+	async def press(self, _key: str) -> None:
+		return None
+
+
+class _ComboboxPage:
+	def __init__(self, field_selector: str, option_selectors: dict[str, str]) -> None:
+		self.field_selector = field_selector
+		self.option_selectors = option_selectors
+		self.option_texts = option_selectors
+		self.clicks: list[str] = []
+		self.fills: list[tuple[str, str]] = []
+		self.typed: list[tuple[str, str]] = []
+		self.presses: list[tuple[str, str]] = []
+		self.selected_option: str | None = None
+		self.keyboard = _KeyboardPage()
+
+	def locator(self, selector: str) -> _ComboboxLocator:
+		return _ComboboxLocator(self, selector)
+
+	async def wait_for_selector(self, selector: str, **_kwargs: object) -> None:
+		if selector == '[role="option"], [role="menuitem"]' and self.option_selectors:
+			return None
+		raise RuntimeError("selector not visible")
+
+	async def wait_for_timeout(self, _timeout: int) -> None:
+		return None
 
 
 class _FakeAdapter:
@@ -107,6 +171,12 @@ def _build_ctx(required: bool) -> JobApplicationContext:
 			page_index=0,
 			page_label="Application",
 			extracted_fields=[field],
+			fill_instructions=[inst],
+			generated_at=datetime.now(timezone.utc),
+		),
+		llm_field_completion=LLMFieldCompletionResult(
+			page_index=0,
+			page_label="Application",
 			fill_instructions=[inst],
 			generated_at=datetime.now(timezone.utc),
 		),
@@ -264,3 +334,55 @@ async def test_required_field_gate_allows_optional_failures(
 	result = await stage.execute(msg)
 
 	assert result.success
+
+
+async def test_strategy_typed_combobox_search_clicks_top_menuitem_option() -> None:
+	field = ExtractedField(
+		id="field-1",
+		run_id="run-1",
+		page_index=0,
+		page_label="Application",
+		field_type="combobox_search",
+		selector='[id="candidate-location"]',
+		label="Location (City)*",
+		required=True,
+	)
+	page = _ComboboxPage(
+		field.selector,
+		{
+			'[role="option"], [role="menuitem"]': "Mountain View, California, United States",
+		},
+	)
+
+	await _strategy_typed(page, field, "Mountain View")
+
+	assert page.typed == [(field.selector, "Mountain View")]
+	assert '[role="option"], [role="menuitem"]' in page.clicks
+	assert page.selected_option == "Mountain View, California, United States"
+
+
+async def test_strategy_typed_combobox_lazy_clicks_exact_option_after_typing() -> None:
+	field = ExtractedField(
+		id="field-2",
+		run_id="run-1",
+		page_index=0,
+		page_label="Application",
+		field_type="combobox_lazy",
+		selector='[id="question_61878062"]',
+		label="Have you previously applied?",
+		required=True,
+		options=["Yes", "No"],
+	)
+	page = _ComboboxPage(
+		field.selector,
+		{
+			'[role="option"]:text-is("Yes"), [role="menuitem"]:text-is("Yes")': "Yes",
+			'[role="option"], [role="menuitem"]': "Yes",
+		},
+	)
+
+	await _strategy_typed(page, field, "Yes")
+
+	assert page.typed == [(field.selector, "Yes")]
+	assert '[role="option"]:text-is("Yes"), [role="menuitem"]:text-is("Yes")' in page.clicks
+	assert page.selected_option == "Yes"

@@ -1,6 +1,6 @@
 {
   "run_id": "earnin_7440771",
-  "started_at": "2026-03-27T01:18:02.637805Z",
+  "started_at": "2026-03-28T04:14:26.704096Z",
   "listing": {
     "job_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
     "apply_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
@@ -8,7 +8,7 @@
     "job_id": "7440771",
     "job_title": "Senior Staff Software Engineer",
     "platform": "greenhouse",
-    "crawled_at": "2026-03-27T01:18:02.637765Z"
+    "crawled_at": "2026-03-28T04:14:26.704011Z"
   },
   "score": {
     "resume_id": "master",
@@ -45,13 +45,13 @@
         "We\u2019re building a product that reimagines the way money moves to empower human potential."
       ]
     },
-    "overall_score": 0.85,
+    "overall_score": 0.8815,
     "criteria_scores": {
       "technical_skills": 0.85,
-      "experience_depth": 0.8,
-      "seniority_alignment": 0.95,
-      "domain_relevance": 0.9,
-      "culture_fit": 0.7
+      "experience_depth": 0.92,
+      "seniority_alignment": 0.88,
+      "domain_relevance": 0.95,
+      "culture_fit": 0.78
     },
     "matched": [
       "technical_skills",
@@ -61,28 +61,29 @@
       "culture_fit"
     ],
     "mismatched": [],
-    "scored_at": "2026-03-27T01:19:11.952605Z"
+    "scored_at": "2026-03-28T04:15:38.497826Z"
   },
   "tailored": {
-    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "resume_id": "e38237c9-0984-4e40-84b6-c1cfef7318dc",
     "parent_resume_id": "master",
     "tailoring_degree": 0,
-    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.md",
+    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_e38237c9.md",
     "diff_summary": "{\"tailoring_degree\":0,\"overall_delta\":0.0,\"sections\":[],\"total_changes\":0}",
-    "tailored_at": "2026-03-27T01:19:11.954514Z"
+    "tailored_at": "2026-03-28T04:15:38.501425Z"
   },
   "packaged": {
-    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
-    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
-    "packaged_at": "2026-03-27T01:19:12.388237Z"
+    "resume_id": "e38237c9-0984-4e40-84b6-c1cfef7318dc",
+    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_e38237c9.pdf",
+    "packaged_at": "2026-03-28T04:15:38.989789Z"
   },
   "session": {
     "platform": "greenhouse",
     "authenticated": false,
     "session_note": "public platform - no authentication required",
-    "established_at": "2026-03-27T01:19:12.388823Z"
+    "established_at": "2026-03-28T04:15:38.990485Z"
   },
   "form_intelligence": null,
+  "llm_field_completion": null,
   "form_session": null,
   "applied": null
 }

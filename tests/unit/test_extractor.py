@@ -5,7 +5,8 @@ from types import SimpleNamespace
 import pytest
 
 from autorole.integrations.form_controls.extractor import SemanticFieldExtractor
-from autorole.integrations.form_controls.extractor import _build_selector, _classify_field_type
+from autorole.integrations.form_controls.extractor import _build_selector, _classify_field_type, _load_lazy_options
+from autorole.integrations.form_controls.models import ExtractedField
 
 
 def test_classify_known_html_types() -> None:
@@ -79,8 +80,9 @@ class _RootHandle:
 
 
 class _Locator:
-	def __init__(self, count_value: int) -> None:
+	def __init__(self, count_value: int, *, evaluate_value: object | None = None) -> None:
 		self._count_value = count_value
+		self._evaluate_value = evaluate_value
 
 	async def count(self) -> int:
 		return self._count_value
@@ -88,15 +90,40 @@ class _Locator:
 	async def evaluate_handle(self, _script: str) -> _RootHandle:
 		return _RootHandle()
 
+	@property
+	def first(self) -> _Locator:
+		return self
+
+	async def scroll_into_view_if_needed(self, **_kwargs: object) -> None:
+		return None
+
+	async def click(self, **_kwargs: object) -> None:
+		return None
+
+	async def press(self, _key: str) -> None:
+		return None
+
+	async def evaluate(self, _script: str) -> object:
+		return self._evaluate_value
+
+	async def all_text_contents(self) -> list[str]:
+		return []
+
+	async def inner_text(self) -> str:
+		return ""
+
 
 class _Page:
+	def __init__(self, raw_fields: list[dict[str, object]] | None = None) -> None:
+		self._raw_fields = raw_fields or []
+
 	def locator(self, selector: str) -> _Locator:
 		if selector == "form#application_form":
 			return _Locator(0)
 		return _Locator(1)
 
 	async def evaluate(self, _script: str, _root_handle: object) -> list[dict[str, object]]:
-		return []
+		return self._raw_fields
 
 
 @pytest.mark.asyncio
@@ -107,3 +134,145 @@ async def test_extract_missing_root_selector_falls_back_to_body() -> None:
 	fields = await extractor.extract(section, run_id="run-1", page_index=0)
 
 	assert fields == []
+
+
+@pytest.mark.asyncio
+async def test_extract_skips_internal_combobox_helper_input() -> None:
+	raw_fields = [
+		{
+			"tag": "input",
+			"type": "text",
+			"role": "combobox",
+			"name": "candidate-location",
+			"id": "candidate-location",
+			"dataAutomationId": "",
+			"dataTestId": "",
+			"contentEditable": False,
+			"insideCombobox": False,
+			"label": "Location (City)*",
+			"required": True,
+			"options": [],
+			"prefilled": "",
+			"fromShadow": False,
+			"idx": 1,
+		},
+		{
+			"tag": "input",
+			"type": "text",
+			"role": "",
+			"name": "",
+			"id": "",
+			"dataAutomationId": "",
+			"dataTestId": "",
+			"contentEditable": False,
+			"insideCombobox": True,
+			"label": "field_4",
+			"required": True,
+			"options": [],
+			"prefilled": "",
+			"fromShadow": False,
+			"idx": 4,
+		},
+	]
+	extractor = SemanticFieldExtractor(_Page(raw_fields))
+	section = SimpleNamespace(label="Application", root="body")
+
+	fields = await extractor.extract(section, run_id="run-1", page_index=0)
+
+	assert [field.label for field in fields] == ["Location (City)*"]
+	assert fields[0].field_type == "combobox_search"
+
+
+class _PopupLocator(_Locator):
+	def __init__(self, selector: str) -> None:
+		super().__init__(1, evaluate_value=["popup-menu"])
+		self._selector = selector
+
+	async def all_text_contents(self) -> list[str]:
+		if self._selector == '[role="option"], [role="listbox"] [role="option"], [role="menuitem"], [role="menu"] [role="menuitem"]':
+			return ["Yes", "No", "Yes"]
+		return []
+
+	async def inner_text(self) -> str:
+		if self._selector == '#popup-menu':
+			return "Yes\nNo\nYes"
+		return ""
+
+
+class _Keyboard:
+	async def press(self, _key: str) -> None:
+		return None
+
+
+class _PopupPage:
+	def __init__(self) -> None:
+		self.keyboard = _Keyboard()
+
+	def locator(self, selector: str) -> _PopupLocator:
+		return _PopupLocator(selector)
+
+	async def wait_for_selector(self, _selector: str, **_kwargs: object) -> None:
+		return None
+
+	async def wait_for_timeout(self, _timeout: int) -> None:
+		return None
+
+
+@pytest.mark.asyncio
+async def test_load_lazy_options_reads_menuitems_and_dedupes() -> None:
+	field = ExtractedField(
+		id="field-1",
+		run_id="run-1",
+		page_index=0,
+		page_label="Application",
+		field_type="combobox_search",
+		selector='[id="question_1"]',
+		label="Question",
+		required=True,
+	)
+
+	options = await _load_lazy_options(_PopupPage(), field)
+
+	assert options == ["Yes", "No"]
+
+
+class _LargeUnscopedLocator(_Locator):
+	def __init__(self, selector: str) -> None:
+		super().__init__(1, evaluate_value=[])
+		self._selector = selector
+
+
+class _LargeUnscopedPopupPage:
+	def __init__(self) -> None:
+		self.keyboard = _Keyboard()
+
+	def locator(self, selector: str) -> _LargeUnscopedLocator:
+		return _LargeUnscopedLocator(selector)
+
+	async def wait_for_selector(self, _selector: str, **_kwargs: object) -> None:
+		return None
+
+	async def wait_for_timeout(self, _timeout: int) -> None:
+		return None
+
+	async def evaluate(self, _script: str, control_ids: list[str]) -> list[str]:
+		assert control_ids == []
+		return [f"Option {index}" for index in range(30)]
+
+
+@pytest.mark.asyncio
+async def test_load_lazy_options_rejects_large_unscoped_popup_for_non_country_field() -> None:
+	field = ExtractedField(
+		id="field-2",
+		run_id="run-1",
+		page_index=0,
+		page_label="Application",
+		field_type="combobox_search",
+		selector='[id="candidate-location"]',
+		label="Location (City)*",
+		required=True,
+	)
+
+	options = await _load_lazy_options(_LargeUnscopedPopupPage(), field)
+
+	assert options == []

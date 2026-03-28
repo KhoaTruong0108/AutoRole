@@ -231,6 +231,7 @@ async def test_form_submission_dryrun_forces_next_page_action(test_config: Any) 
 	assert out_ctx.form_session is not None
 	assert out_ctx.form_session.last_advance_action == "done"
 	assert out_ctx.form_session.page_index == 0
+	assert page.file_locator.files == ["/tmp/resume.pdf"]
 
 
 async def test_form_submission_fails_when_llm_completion_missing(test_config: Any) -> None:

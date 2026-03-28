@@ -31,7 +31,7 @@ class ScoringWeights(BaseModel):
 class TailoringConfig(BaseModel):
 	max_attempts: int = 2
 	degree_4_enabled: bool = False
-	pass_threshold: float = 0.85
+	pass_threshold: float = 0.65
 	degree_1_threshold: float = 0.70
 	degree_2_threshold: float = 0.55
 	degree_3_threshold: float = 0.40
@@ -40,7 +40,8 @@ class TailoringConfig(BaseModel):
 class LLMConfig(BaseModel):
 	provider: Literal["openai", "anthropic", "ollama"] = "ollama"
 	model: str = "gpt-4o"
-	ollama_model: str = "llama3.1:8b"
+	ollama_model: str = "gpt-oss:120b-cloud"
+	# ollama_model: str = "qwen2.5-coder:3b"
 	ollama_base_url: str = "http://127.0.0.1:11434"
 	temperature: float = 0.2
 	max_retries: int = 3

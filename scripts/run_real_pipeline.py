@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import datetime
 import sys
 from pathlib import Path
 
@@ -24,10 +25,6 @@ STAGE_ORDER = [
 	"form_submission",
 	"concluding",
 ]
-
-FROM_STAGE_ALIASES = {
-	"form_intelligent": "form_intelligence",
-}
 
 
 def parse_args() -> argparse.Namespace:
@@ -87,7 +84,7 @@ def parse_args() -> argparse.Namespace:
 	)
 	parser.add_argument(
 		"--from-stage",
-		choices=STAGE_ORDER + list(FROM_STAGE_ALIASES.keys()),
+		choices=STAGE_ORDER,
 		default="",
 		help="Force starting stage when resuming; if omitted, starts after last successful stage",
 	)
@@ -98,11 +95,9 @@ def _parse_csv(value: str) -> list[str]:
 	return [part.strip() for part in value.split(",") if part.strip()]
 
 
-def _normalize_from_stage(value: str) -> str:
-	return FROM_STAGE_ALIASES.get(value, value)
-
-
 async def amain() -> int:
+	current_time = datetime.now()
+
 	args = parse_args()
 	config = AppConfig()
 	run_config = RunConfig(
@@ -115,14 +110,15 @@ async def amain() -> int:
 		max_listings=args.max_listings,
 		headless=args.headless,
 		resume_run_id=args.resume_run_id,
-		from_stage=_normalize_from_stage(args.from_stage),
+		from_stage=args.from_stage,
 	)
-	return await JobApplicationPipeline(config, run_config).run()
+
+	run = await JobApplicationPipeline(config, run_config).run()
+	print(f"Pipeline finished at {datetime.now()}, total duration: {datetime.now() - current_time}")
+	return run
 
 
 def main() -> None:
 	raise SystemExit(asyncio.run(amain()))
-
-
 if __name__ == "__main__":
 	main()

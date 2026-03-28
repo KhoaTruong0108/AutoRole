@@ -1,0 +1,21 @@
+{
+  "run_id": "axon_7523038003",
+  "started_at": "2026-03-28T17:55:46.250746Z",
+  "listing": {
+    "job_url": "https://job-boards.greenhouse.io/axon/jobs/7523038003",
+    "apply_url": "https://job-boards.greenhouse.io/axon/jobs/7523038003",
+    "company_name": "axon",
+    "job_id": "7523038003",
+    "job_title": "Senior Software Engineer II, Vehicle Intelligence",
+    "platform": "greenhouse",
+    "crawled_at": "2026-03-28T17:55:46.250697Z"
+  },
+  "score": null,
+  "tailored": null,
+  "packaged": null,
+  "session": null,
+  "form_intelligence": null,
+  "llm_field_completion": null,
+  "form_session": null,
+  "applied": null
+}

@@ -1,0 +1,91 @@
+{
+  "run_id": "axon_7523038003",
+  "started_at": "2026-03-28T17:55:46.250746Z",
+  "listing": {
+    "job_url": "https://job-boards.greenhouse.io/axon/jobs/7523038003",
+    "apply_url": "https://job-boards.greenhouse.io/axon/jobs/7523038003",
+    "company_name": "axon",
+    "job_id": "7523038003",
+    "job_title": "Senior Software Engineer II, Vehicle Intelligence",
+    "platform": "greenhouse",
+    "crawled_at": "2026-03-28T17:55:46.250697Z"
+  },
+  "score": {
+    "resume_id": "master",
+    "jd_html": "&lt;div class=&quot;content-intro&quot;&gt;&lt;h4&gt;&lt;strong&gt;Join Axon and be a Force for Good.&lt;/strong&gt;&lt;/h4&gt;\n&lt;p&gt;At Axon, we\u2019re on a mission to Protect Life. We\u2019re explorers, pursuing society\u2019s most critical safety and justice issues with our ecosystem of devices and cloud software. Like our products, we work better together. We connect with candor and care, seeking out diverse perspectives from our customers, communities and each other.&lt;br&gt;&lt;br&gt;Life at Axon is fast-paced, challenging and meaningful. Here, you\u2019ll take ownership and drive real change. Constantly grow as you work hard for a mission that matters at a company where you matter.&lt;/p&gt;&lt;/div&gt;&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;h4&gt;Your Impact&lt;/h4&gt;\n&lt;p&gt;As a Senior Software Engineer II, in the Real Time Operations pillar at Axon, you will be intimately involved in the architecture decisions that will shape our Vehicle Intelligence / Automatic License Plate Recognition (ALPR) products. You live and breathe distributed systems, APIs and full stack services that require high availability and fast, consistent performance. You love working with the latest open source technologies, and can leverage your system design skills to make the right technical decisions on a system that needs to be operationally resilient.&lt;br&gt;&lt;br&gt;Not only can you drive decisions among competing engineering trade-offs, your empathy with customers allows you to develop innovative solutions for our customer problems. You will be working closely with product managers and designers to ensure we are building the right solution for our customers. You also enjoy mentoring other engineers, and love to be a hands-on teacher helping to up level the engineers around you.&lt;br&gt;&lt;br&gt;Join us to work with a passionate, mission-driven group of folks who want to positively impact the lives of first responders and those that they serve.&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;h4&gt;What You\u2019ll Do&lt;/h4&gt;\n&lt;p&gt;&lt;strong&gt;Location: &lt;/strong&gt;This role is based out of our Seattle Office and follows a hybrid schedule. We rely on in-person collaboration and ask that team members work onsite Tuesdays through Fridays, with the flexibility to work remotely on Mondays, unless there is an approved workplace accommodation. We believe that connection fuels innovation, and our in-office culture is designed to foster meaningful teamwork, mentorship, and shared success.&lt;br&gt;&lt;strong&gt;Reports to:&lt;/strong&gt;&lt;strong&gt; &lt;/strong&gt;Director of Engineering&lt;br&gt;&lt;strong&gt;Direct Reports:&lt;/strong&gt; None&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Impact the development and design; launching new features and initiatives&lt;/li&gt;\n&lt;li&gt;Lead engineering architecture design reviews&lt;/li&gt;\n&lt;li&gt;Set a high technical bar for the team through code and architecture design reviews&lt;/li&gt;\n&lt;li&gt;Mentoring &amp;amp; coaching engineers&lt;/li&gt;\n&lt;li&gt;Working across teams with Product, Design, and Engineering to create integrated solutions that delight our customers&lt;/li&gt;\n&lt;li&gt;Identify improvements to raise our engineering process, including long-term thinking&lt;/li&gt;\n&lt;li&gt;Building services that adhere to our high bar on availability and latency in this mission-critical space&lt;/li&gt;\n&lt;li&gt;Scaling our APIs, cloud services and ingestion pipelines&lt;/li&gt;\n&lt;li&gt;Working with the latest Agentic AI engineering tools (Claude, OpenAI / Codex, Cursor)&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;strong&gt;What You Bring&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Bachelor&#39;s Degree in Computer Science, Engineering, or related field&lt;/li&gt;\n&lt;li&gt;8+ years of professional software development experience&lt;/li&gt;\n&lt;li&gt;Experience designing and delivering highly-available, scalable cloud-based systems&lt;/li&gt;\n&lt;li&gt;Backend service experience in multiple, managed languages such as Go, Java, Python, or similar&lt;/li&gt;\n&lt;li&gt;Experience with frontend technologies including React or Angular&lt;/li&gt;\n&lt;li&gt;Experience working with SQL or NoSQL data stores such as MySQL, Cassandra, elasticsearch&lt;/li&gt;\n&lt;li&gt;You leverage AI agents &amp;amp; tools for the tasks they\u2019re built for, freeing you to focus on the work that requires human creativity, judgment and delivering value to customers&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;h4&gt;&lt;strong&gt;Benefits that Benefit You&lt;/strong&gt;&lt;/h4&gt;\n&lt;ul&gt;\n&lt;li&gt;Competitive salary and 401k with employer match&lt;/li&gt;\n&lt;li&gt;Discretionary paid time off&lt;/li&gt;\n&lt;li&gt;Paid parental leave for all&lt;/li&gt;\n&lt;li&gt;Medical, Dental, Vision plans&lt;/li&gt;\n&lt;li&gt;Fitness Programs&lt;/li&gt;\n&lt;li&gt;Emotional &amp;amp; Mental Wellness support&lt;/li&gt;\n&lt;li&gt;Learning &amp;amp; Development programs&lt;/li&gt;\n&lt;li&gt;Employee Resource Groups (ERGs)&lt;/li&gt;\n&lt;li&gt;And yes, we have snacks in our offices&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;em&gt;Benefits listed herein may vary depending on the nature of your employment and the location where you work.&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;&lt;div class=&quot;content-pay-transparency&quot;&gt;&lt;div class=&quot;pay-input&quot;&gt;&lt;div class=&quot;description&quot;&gt;&lt;p&gt;Axon is a total compensation company, meaning compensation is made up of base pay, bonus, and stock awards. The actual base pay is dependent upon many factors, such as: level, function, training, transferable skills, work experience, business needs, geographic market, and often a combination of all these factors. Our benefits offer an array of options to help support you physically, financially and emotionally through the big milestones and in your everyday life. To see more details on our benefits offerings please visit &lt;a href=&quot;https://www.axon.com/careers&quot; target=&quot;_blank&quot;&gt;https://www.axon.com/careers&lt;/a&gt;.&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;title&quot;&gt;Base Pay Range&lt;/div&gt;&lt;div class=&quot;pay-range&quot;&gt;&lt;span&gt;$148,500&lt;/span&gt;&lt;span class=&quot;divider&quot;&gt;&amp;mdash;&lt;/span&gt;&lt;span&gt;$237,600 USD&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;content-conclusion&quot;&gt;&lt;p&gt;Don\u2019t meet every single requirement? That&#39;s ok. At Axon, we Aim Far. We think big with a long-term view because we want to reinvent the world to be a safer, better place. We are also committed to building diverse teams that reflect the communities we serve.&lt;/p&gt;\n&lt;p&gt;Studies have shown that women and people of color are less likely to apply to jobs unless they check every box in the job description. If you\u2019re excited about this role and our mission to Protect Life but your experience doesn\u2019t align perfectly with every qualification listed here, we encourage you to apply anyways. You may be just the right candidate for this or other roles.&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;Important Notes&lt;/strong&gt;&lt;/p&gt;\n&lt;p&gt;&lt;em&gt;The above job description is not intended as, nor should it be construed as, exhaustive of all duties, responsibilities, skills, efforts, or working conditions associated with this job. The job description may change or be supplemented at any time in accordance with business needs and conditions.&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;&lt;em&gt;Some roles may also require legal eligibility to work in a firearms environment.&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;&lt;em&gt;We collect personal information from applicants to evaluate candidates for employment. You may request access, deletion, or exercise other CCPA rights at&amp;nbsp;&lt;strong data-stringify-type=&quot;bold&quot;&gt;&lt;a class=&quot;c-link c-link--underline&quot; href=&quot;mailto:axongreenhousesupport@axon.com&quot; target=&quot;_blank&quot; data-stringify-link=&quot;mailto:axongreenhousesupport@axon.com&quot; data-sk=&quot;tooltip_parent&quot;&gt;axongreenhousesupport@axon.com&lt;/a&gt;&lt;/strong&gt;&amp;nbsp;or via our&amp;nbsp;&lt;a class=&quot;c-link c-link--underline&quot; href=&quot;https://privacyportal.onetrust.com/webform/0efc1702-9321-4119-bc9d-a06c3a1d3e4e/ca57cc26-a159-4193-9f6e-58ffe3fd2509&quot; target=&quot;_blank&quot; data-stringify-link=&quot;https://privacyportal.onetrust.com/webform/0efc1702-9321-4119-bc9d-a06c3a1d3e4e/ca57cc26-a159-4193-9f6e-58ffe3fd2509&quot; data-sk=&quot;tooltip_parent&quot;&gt;Axon Privacy Web Form&lt;/a&gt;. For more information, please see the Your California Privacy Rights section of our&amp;nbsp;&lt;a class=&quot;c-link c-link--underline&quot; href=&quot;https://www.axon.com/candidateprivacypolicy&quot; target=&quot;_blank&quot; data-stringify-link=&quot;https://www.axon.com/candidateprivacypolicy&quot; data-sk=&quot;tooltip_parent&quot;&gt;Applicant and Candidate Privacy Notice.&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;&lt;em&gt;Axon\u2019s mission is to Protect Life and is committed to the well-being and safety of its employees as well as Axon\u2019s impact on the environment. All Axon employees must be aware of and committed to the appropriate environmental, health, and safety regulations, policies, and procedures. Axon employees are empowered to report safety concerns as they arise and activities potentially impacting the environment.&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;&lt;em&gt;We are an equal opportunity employer that promotes justice, advances equity, values diversity and fosters inclusion. We\u2019re committed to hiring the best talent \u2014 regardless of race, creed, color, ancestry, religion, sex (including pregnancy), national origin, sexual orientation, age, citizenship status, marital status, disability, gender identity, genetic information, veteran status, or any other characteristic protected by applicable laws, regulations and ordinances \u2014 and empowering all of our employees so they can do their best work. If you have a disability or special need that requires assistance or accommodation during the application or the recruiting process, please email &lt;a href=&quot;mailto:recruitingops@axon.com&quot;&gt;recruitingops@axon.com. &lt;/a&gt;&amp;nbsp;Please note that this email address is for accommodation purposes only. Axon will not respond to inquiries for other purposes.&lt;/em&gt;&lt;/p&gt;\n&lt;p&gt;Phishing alert:&amp;nbsp; Axon will never ask you to pay for any part of the hiring process, including training, equipment, or background checks. We do not make job offers via text message, WhatsApp, or instant messaging platforms without a formal interview process.&amp;nbsp; All legitimate job openings are listed on our official careers page at &lt;a href=&quot;https://www.axon.com/careers&quot;&gt;https://www.axon.com/careers&lt;/a&gt;. &amp;nbsp;If you receive a suspicious offer or outreach from an email address that is not &lt;strong&gt;@axon.com&lt;/strong&gt;, or if you are asked for sensitive personal information (bank details, Social Security Number) prematurely, please ignore the message and report it to &lt;a href=&quot;mailto:recruitingops@axon.com&quot;&gt;recruitingops@axon.com&lt;/a&gt;.&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;&lt;/div&gt;",
+    "jd_breakdown": {
+      "qualifications": [
+        "Bachelor's Degree in Computer Science, Engineering, or related field",
+        "8+ years of professional software development experience",
+        "Experience designing and delivering highly-available, scalable cloud-based systems",
+        "Backend service experience in multiple managed languages such as Go, Java, Python, or similar",
+        "Experience with frontend technologies including React or Angular",
+        "Experience working with SQL or NoSQL data stores such as MySQL, Cassandra, Elasticsearch",
+        "Ability to leverage AI agents & tools for appropriate tasks"
+      ],
+      "responsibilities": [
+        "Impact development and design by launching new features and initiatives",
+        "Lead engineering architecture design reviews",
+        "Set a high technical bar through code and architecture design reviews",
+        "Mentor and coach engineers",
+        "Collaborate across Product, Design, and Engineering to create integrated solutions that delight customers",
+        "Identify and implement improvements to engineering processes with long-term thinking",
+        "Build services that meet high availability and low latency requirements in a mission-critical space",
+        "Scale APIs, cloud services, and ingestion pipelines",
+        "Work with the latest Agentic AI engineering tools (Claude, OpenAI/Codex, Cursor)"
+      ],
+      "required_skills": [
+        "Designing highly-available, scalable cloud architectures",
+        "Backend development in Go, Java, Python, or similar languages",
+        "Frontend development with React or Angular",
+        "Working with SQL databases (MySQL) and NoSQL stores (Cassandra, Elasticsearch)",
+        "Building and scaling APIs and ingestion pipelines",
+        "Distributed systems and full-stack service design",
+        "Using AI agents/tools such as Claude, OpenAI/Codex, Cursor"
+      ],
+      "preferred_skills": [],
+      "culture_signals": [
+        "Mission-driven focus on protecting life and public safety",
+        "Fast-paced, challenging, and meaningful work with ownership",
+        "Hybrid in-office collaboration (on-site Tuesdays\u2011Fridays) to foster teamwork and mentorship",
+        "Values candor, care, and diverse perspectives from customers, communities, and teammates",
+        "Emphasis on mentorship, shared success, and continuous learning",
+        "Commitment to diversity, equity, inclusion, and equal opportunity employment",
+        "Supportive benefits including mental wellness, learning & development programs, employee resource groups, and office snacks",
+        "Encouragement to apply even if not meeting every listed qualification",
+        "Focus on environmental, health, and safety responsibility"
+      ]
+    },
+    "overall_score": 0.8565,
+    "criteria_scores": {
+      "technical_skills": 0.85,
+      "experience_depth": 0.9,
+      "seniority_alignment": 0.92,
+      "domain_relevance": 0.75,
+      "culture_fit": 0.8
+    },
+    "matched": [
+      "technical_skills",
+      "experience_depth",
+      "seniority_alignment",
+      "domain_relevance",
+      "culture_fit"
+    ],
+    "mismatched": [],
+    "scored_at": "2026-03-28T17:56:15.119304Z"
+  },
+  "tailored": {
+    "resume_id": "7f2c7da1-9afb-4b72-9f6b-8afbf06d8236",
+    "parent_resume_id": "master",
+    "tailoring_degree": 0,
+    "file_path": "/Users/khoatruong0108/.autorole/resumes/axon_7523038003_v1_7f2c7da1.md",
+    "diff_summary": "{\"tailoring_degree\":0,\"overall_delta\":0.0,\"sections\":[],\"total_changes\":0}",
+    "tailored_at": "2026-03-28T17:56:15.120762Z"
+  },
+  "packaged": null,
+  "session": null,
+  "form_intelligence": null,
+  "llm_field_completion": null,
+  "form_session": null,
+  "applied": null
+}

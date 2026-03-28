@@ -100,7 +100,7 @@ class FormSubmissionStage(Stage):
 		]
 
 		file_input = await adapter.get_file_input(self._page)
-		if file_input is not None and not dryrun_skip_submit:
+		if file_input is not None:
 			await file_input.set_input_files(str(ctx.packaged.pdf_path))
 			if hasattr(self._page, "wait_for_timeout"):
 				await self._page.wait_for_timeout(500)

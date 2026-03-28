@@ -17,6 +17,9 @@ from autorole.integrations.form_controls.models import (
 )
 
 
+_COMBOBOX_OPTION_SELECTOR = '[role="option"], [role="menuitem"]'
+
+
 class FormExecutor:
 	async def execute_page(
 		self,
@@ -117,14 +120,10 @@ async def _strategy_typed(page: object, field: ExtractedField, value: str) -> No
 				if await cb.count() > 0:
 					await cb.check()
 		case "combobox_search":
+			await loc.click()
 			await loc.fill("")
 			await loc.type(value, delay=40)
-			listbox = page.locator('[role="option"]').first
-			try:
-				await listbox.wait_for(state="visible", timeout=3_000)
-				await listbox.click()
-			except Exception:
-				return
+			await _select_combobox_option(page, loc, field, value)
 		case "combobox_lazy":
 			await loc.click()
 			# Many ATS comboboxes allow typing free text to filter top options.
@@ -133,28 +132,76 @@ async def _strategy_typed(page: object, field: ExtractedField, value: str) -> No
 				await loc.type(value, delay=40)
 			except Exception:
 				pass
-			await page.wait_for_selector('[role="option"], [role="menuitem"]', timeout=3_000)
-			target = page.locator(
-				f'[role="option"]:text-is("{value}"), [role="menuitem"]:text-is("{value}")'
-			).first
-			if await target.count() == 0:
-				partial = page.locator(f'[role="option"]:has-text("{value}"), [role="menuitem"]:has-text("{value}")').first
-				if await partial.count() > 0:
-					await partial.click()
-					return
-				top_option = page.locator('[role="option"], [role="menuitem"]').first
-				if await top_option.count() > 0:
-					await top_option.click()
-					return
-				raise FillError(
-					f'combobox_lazy: option "{value}" not found for "{field.label}"'
-				)
-			else:
-				await target.click()
+			await _select_combobox_option(page, loc, field, value)
 		case "file" | "hidden":
 			return
 		case _:
 			raise FillError(f"Unsupported field type: {field.field_type}")
+
+
+async def _select_combobox_option(
+	page: object,
+	loc: object,
+	field: ExtractedField,
+	value: str,
+) -> None:
+	candidate_values: list[str] = []
+	for candidate in [value, _pick_top_option(value, field.options)]:
+		if candidate and candidate not in candidate_values:
+			candidate_values.append(candidate)
+
+	popup_visible = False
+	for _ in range(2):
+		try:
+			await page.wait_for_selector(_COMBOBOX_OPTION_SELECTOR, timeout=1_500)
+			popup_visible = True
+			break
+		except Exception:
+			if hasattr(loc, "press"):
+				try:
+					await loc.press("ArrowDown")
+				except Exception:
+					pass
+
+	if popup_visible:
+		for candidate in candidate_values:
+			exact = page.locator(
+				f'[role="option"]:text-is("{candidate}"), [role="menuitem"]:text-is("{candidate}")'
+			).first
+			if await exact.count() > 0:
+				await exact.click()
+				if hasattr(page, "wait_for_timeout"):
+					await page.wait_for_timeout(100)
+				return
+
+		for candidate in candidate_values:
+			partial = page.locator(
+				f'[role="option"]:has-text("{candidate}"), [role="menuitem"]:has-text("{candidate}")'
+			).first
+			if await partial.count() > 0:
+				await partial.click()
+				if hasattr(page, "wait_for_timeout"):
+					await page.wait_for_timeout(100)
+				return
+
+		top_option = page.locator(_COMBOBOX_OPTION_SELECTOR).first
+		if await top_option.count() > 0:
+			await top_option.click()
+			if hasattr(page, "wait_for_timeout"):
+				await page.wait_for_timeout(100)
+			return
+
+	if hasattr(loc, "press"):
+		try:
+			await loc.press("ArrowDown")
+			await loc.press("Enter")
+			if hasattr(page, "wait_for_timeout"):
+				await page.wait_for_timeout(100)
+			return
+		except Exception:
+			pass
+
+	raise FillError(f'combobox: option "{value}" not found for "{field.label}"')
 
 
 async def _strategy_generic_fill(page: object, field: ExtractedField, value: str) -> None:
