@@ -17,6 +17,7 @@ from autorole.pipeline import inject_loop_metadata_from_gate_reason
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
+from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
 from autorole.stages.packaging import PackagingStage
 from autorole.stages.scoring import CriterionDetail, CriterionScores, JDBreakdown, ScoringStage
@@ -190,7 +191,7 @@ class MockLLMClient:
 
 
 class StubExtractor:
-	async def extract(self, _section: Any, run_id: str, page_index: int) -> list[Any]:
+	async def extract(self, _section: Any, run_id: str, page_index: int, _platform_id: str = "") -> list[Any]:
 		from autorole.integrations.form_controls.models import ExtractedField
 
 		return [
@@ -245,6 +246,10 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 			llm,
 			form_page,
 			form_extractor=StubExtractor(),
+		)
+		llm_completer = LLMFieldCompleterStage(
+			config,
+			llm,
 			use_random_questionnaire_answers=True,
 		)
 		form_submit = FormSubmissionStage(config, form_page)
@@ -312,6 +317,10 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 		intel_result = await form_intel.execute(Message(run_id=ctx.run_id, payload=ctx.model_dump()))
 		assert intel_result.success
 		ctx = JobApplicationContext.model_validate(intel_result.output)
+
+		completion_result = await llm_completer.execute(Message(run_id=ctx.run_id, payload=ctx.model_dump()))
+		assert completion_result.success
+		ctx = JobApplicationContext.model_validate(completion_result.output)
 
 		submit_result = await form_submit.execute(Message(run_id=ctx.run_id, payload=ctx.model_dump()))
 		assert submit_result.success

@@ -87,6 +87,15 @@ class FormIntelligenceResult(BaseModel):
 	form_json_filled: dict[str, Any] = Field(default_factory=dict)
 
 
+class LLMFieldCompletionResult(BaseModel):
+	page_index: int = 0
+	page_label: str = ""
+	fill_instructions: list[FillInstruction] = Field(default_factory=list)
+	generated_at: datetime
+	questionnaire: list[dict[str, Any]] = Field(default_factory=list)
+	form_json_filled: dict[str, Any] = Field(default_factory=dict)
+
+
 class ApplicationResult(BaseModel):
 	resume_id: str
 	execution_result: ExecutionResult | None = None
@@ -170,5 +179,6 @@ class JobApplicationContext(PipelineContext):
 	packaged: PackagedResume | None = None
 	session: SessionResult | None = None
 	form_intelligence: FormIntelligenceResult | None = None
+	llm_field_completion: LLMFieldCompletionResult | None = None
 	form_session: FormSession | None = None
 	applied: ApplicationResult | None = None

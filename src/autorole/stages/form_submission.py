@@ -66,16 +66,20 @@ class FormSubmissionStage(Stage):
 		if (
 			ctx.listing is None
 			or ctx.form_intelligence is None
+			or ctx.llm_field_completion is None
 			or ctx.form_session is None
 			or ctx.packaged is None
 		):
 			return StageResult.fail(
-				"FormSubmissionStage: listing, form_intelligence, form_session and packaged must be set",
+				(
+					"FormSubmissionStage: listing, form_intelligence, llm_field_completion, "
+					"form_session and packaged must be set"
+				),
 				"PreconditionError",
 			)
 
 		fields = ctx.form_intelligence.extracted_fields
-		instructions = ctx.form_intelligence.fill_instructions
+		instructions = ctx.llm_field_completion.fill_instructions
 		page_index = ctx.form_intelligence.page_index
 		platform_id = ctx.form_session.detection.platform_id
 		adapter = get_adapter(platform_id)

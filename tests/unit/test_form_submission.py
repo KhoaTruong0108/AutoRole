@@ -3,7 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext, PackagedResume
+from autorole.context import (
+	FormIntelligenceResult,
+	FormSession,
+	JobApplicationContext,
+	LLMFieldCompletionResult,
+	PackagedResume,
+)
 from autorole.integrations.form_controls.models import (
 	DetectionResult,
 	ExtractedField,
@@ -141,6 +147,12 @@ def _ctx() -> JobApplicationContext:
 			fill_instructions=[inst],
 			generated_at=datetime.now(timezone.utc),
 		),
+		llm_field_completion=LLMFieldCompletionResult(
+			page_index=0,
+			page_label="Application form",
+			fill_instructions=[inst],
+			generated_at=datetime.now(timezone.utc),
+		),
 	)
 
 
@@ -219,3 +231,14 @@ async def test_form_submission_dryrun_forces_next_page_action(test_config: Any) 
 	assert out_ctx.form_session is not None
 	assert out_ctx.form_session.last_advance_action == "done"
 	assert out_ctx.form_session.page_index == 0
+
+
+async def test_form_submission_fails_when_llm_completion_missing(test_config: Any) -> None:
+	page = MockPage()
+	stage = FormSubmissionStage(test_config, page, executor=StubExecutor([]))
+
+	ctx_without_completion = _ctx().model_copy(update={"llm_field_completion": None})
+	result = await stage.execute(Message(run_id="acme_123", payload=ctx_without_completion.model_dump()))
+
+	assert not result.success
+	assert result.error_type == "PreconditionError"

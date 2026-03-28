@@ -52,7 +52,10 @@ async def test_exploring_worker_success(repo, tmp_path):
     assert out_ctx.listing is not None
     assert await queue.pull(DEAD_LETTER_Q) is None
 
-    async with repo._db.execute("SELECT COUNT(*) FROM job_listings WHERE run_id = ?", ("test-run-001",)) as cur:
+    async with repo._db.execute(
+        "SELECT COUNT(*) FROM job_listings WHERE run_id = ?",
+        (output_fixture["run_id"],),
+    ) as cur:
         row = await cur.fetchone()
     assert row is not None and row[0] == 1
 

@@ -24,6 +24,7 @@ from autorole.queue import (
     DEAD_LETTER_Q,
     EXPLORING_Q,
     FORM_INTEL_Q,
+    LLM_FIELD_COMPLETER_Q,
     FORM_SUB_Q,
     InMemoryQueueBackend,
     Message,
@@ -34,6 +35,7 @@ from autorole.queue import (
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
+from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
 from autorole.stages.packaging import PackagingStage
 from autorole.stages.scoring import ScoringStage
@@ -43,6 +45,7 @@ from autorole.workers.base import StageWorker, WorkerConfig
 from autorole.workers.concluding import ConcludingWorker
 from autorole.workers.exploring import ExploringWorker
 from autorole.workers.form_intelligence import FormIntelligenceWorker
+from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
 from autorole.workers.qualification import QualificationWorker
@@ -69,7 +72,8 @@ def _stage_to_queues(stage: str) -> tuple[str, str]:
         "qualification": (SCORING_Q, PACKAGING_Q),
         "packaging": (PACKAGING_Q, SESSION_Q),
         "session": (SESSION_Q, FORM_INTEL_Q),
-        "form_intelligence": (FORM_INTEL_Q, FORM_SUB_Q),
+        "form_intelligence": (FORM_INTEL_Q, LLM_FIELD_COMPLETER_Q),
+        "llm_field_completer": (LLM_FIELD_COMPLETER_Q, FORM_SUB_Q),
         "form_submission": (FORM_SUB_Q, CONCLUDING_Q),
         "concluding": (CONCLUDING_Q, CONCLUDING_Q),
     }
@@ -118,7 +122,7 @@ async def _build_worker(
         poll_interval_seconds=0,
     )
 
-    if stage in {"qualification", "session", "form_intelligence", "form_submission", "exploring"}:
+    if stage in {"qualification", "session", "form_intelligence", "llm_field_completer", "form_submission", "exploring"}:
         from playwright.async_api import async_playwright
 
         playwright = await async_playwright().start()
@@ -154,6 +158,8 @@ async def _build_worker(
         worker = SessionWorker(stage=SessionStage(cfg, CredentialStore()), **shared)
     elif stage == "form_intelligence":
         worker = FormIntelligenceWorker(stage=FormIntelligenceStage(cfg, llm_client, page), **shared)
+    elif stage == "llm_field_completer":
+        worker = LLMFieldCompleterWorker(stage=LLMFieldCompleterStage(cfg, llm_client), **shared)
     elif stage == "form_submission":
         worker = FormSubmissionWorker(stage=FormSubmissionStage(cfg, page), **shared)
     elif stage == "concluding":
@@ -228,7 +234,7 @@ def _parse_args() -> argparse.Namespace:
 
 async def amain() -> int:
     args = _parse_args()
-    if args.mode == "observe" and args.stage in {"session", "form_intelligence", "form_submission"}:
+    if args.mode == "observe" and args.stage in {"session", "form_intelligence", "llm_field_completer", "form_submission"}:
         print(f"[warn] observe mode skips stage '{args.stage}'")
         return 0
 

@@ -17,6 +17,7 @@ STAGE_ORDER = [
 	"packaging",
 	"session",
 	"form_intelligence",
+	"llm_field_completer",
 	"form_submission",
 	"concluding",
 ]

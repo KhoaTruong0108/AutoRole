@@ -18,6 +18,7 @@ from autorole.queue import (
     DEAD_LETTER_Q,
     EXPLORING_Q,
     FORM_INTEL_Q,
+    LLM_FIELD_COMPLETER_Q,
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
@@ -27,6 +28,7 @@ from autorole.queue import (
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
+from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
 from autorole.stages.packaging import PackagingStage
 from autorole.stages.scoring import ScoringStage
@@ -36,6 +38,7 @@ from autorole.workers import WorkerConfig
 from autorole.workers.concluding import ConcludingWorker
 from autorole.workers.exploring import ExploringWorker
 from autorole.workers.form_intelligence import FormIntelligenceWorker
+from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
 from autorole.workers.qualification import QualificationWorker
@@ -113,7 +116,13 @@ async def _build_worker(stage_name: str, repo: JobRepository, logger: logging.Lo
     if stage_name == "form_intelligence":
         return FormIntelligenceWorker(
             stage=FormIntelligenceStage(cfg, llm_client, form_page),
-            config=_worker_config(FORM_INTEL_Q, FORM_SUB_Q),
+            config=_worker_config(FORM_INTEL_Q, LLM_FIELD_COMPLETER_Q),
+            **shared,
+        )
+    if stage_name == "llm_field_completer":
+        return LLMFieldCompleterWorker(
+            stage=LLMFieldCompleterStage(cfg, llm_client),
+            config=_worker_config(LLM_FIELD_COMPLETER_Q, FORM_SUB_Q),
             **shared,
         )
     if stage_name == "form_submission":

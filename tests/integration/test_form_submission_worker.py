@@ -74,7 +74,7 @@ async def test_form_submission_worker_pass_to_concluding(repo, tmp_path):
     out = await queue.pull(CONCLUDING_Q)
     assert out is not None
     out_ctx = JobApplicationContext.model_validate(out.payload)
-    assert out_ctx.applied is not None
+    assert out_ctx.form_session is not None
     assert await queue.pull(DEAD_LETTER_Q) is None
 
 

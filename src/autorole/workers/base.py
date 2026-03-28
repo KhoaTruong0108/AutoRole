@@ -15,6 +15,7 @@ from autorole.queue import (
     CONCLUDING_Q,
     EXPLORING_Q,
     FORM_INTEL_Q,
+    LLM_FIELD_COMPLETER_Q,
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
@@ -29,6 +30,7 @@ _QUEUE_TO_STAGE: dict[str, str] = {
     PACKAGING_Q: "packaging",
     SESSION_Q: "session",
     FORM_INTEL_Q: "form_intelligence",
+    LLM_FIELD_COMPLETER_Q: "llm_field_completer",
     FORM_SUB_Q: "form_submission",
     CONCLUDING_Q: "concluding",
 }
@@ -38,7 +40,8 @@ _NEXT_REPLY_QUEUE: dict[str, str] = {
     SCORING_Q: PACKAGING_Q,
     PACKAGING_Q: SESSION_Q,
     SESSION_Q: FORM_INTEL_Q,
-    FORM_INTEL_Q: FORM_SUB_Q,
+    FORM_INTEL_Q: LLM_FIELD_COMPLETER_Q,
+    LLM_FIELD_COMPLETER_Q: FORM_SUB_Q,
     FORM_SUB_Q: CONCLUDING_Q,
     CONCLUDING_Q: CONCLUDING_Q,
 }
@@ -49,7 +52,8 @@ _DRYRUN_FIXTURE_BY_STAGE: dict[str, str] = {
     "qualification": "packaging_input.json",
     "packaging": "session_input.json",
     "session": "form_intelligence_input.json",
-    "form_intelligence": "form_submission_input.json",
+    "form_intelligence": "llm_field_completer_input.json",
+    "llm_field_completer": "form_submission_input.json",
     "form_submission": "concluding_input.json",
     "concluding": "concluding_output.json",
 }

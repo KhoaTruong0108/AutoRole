@@ -39,20 +39,15 @@ class StubExtractor:
 		self.fields = fields
 		self.calls = 0
 
-	async def extract(self, _section: Any, _run_id: str, _page_index: int) -> list[ExtractedField]:
+	async def extract(
+		self,
+		_section: Any,
+		_run_id: str,
+		_page_index: int,
+		_platform_id: str = "",
+	) -> list[ExtractedField]:
 		self.calls += 1
 		return self.fields
-
-
-class StubMapper:
-	def __init__(self, instructions: list[FillInstruction]) -> None:
-		self.instructions = instructions
-		self.calls = 0
-
-	async def map(self, *args: Any, **kwargs: Any) -> list[FillInstruction]:
-		_ = (args, kwargs)
-		self.calls += 1
-		return self.instructions
 
 
 def _ctx() -> JobApplicationContext:
@@ -94,20 +89,15 @@ def _instruction() -> FillInstruction:
 
 
 async def test_form_intelligence_initializes_form_session_on_first_iteration(test_config: Any) -> None:
-	base_dir = Path(test_config.base_dir)
-	(base_dir / "user_profile.json").write_text("{}", encoding="utf-8")
-
 	page = MockPage(html="<html><body>clean</body></html>")
 	page.url = "https://example.com/apply"
 	extractor = StubExtractor([_field()])
-	mapper = StubMapper([_instruction()])
 
 	stage = FormIntelligenceStage(
 		test_config,
 		llm_client=object(),
 		page=page,
 		form_extractor=extractor,
-		field_mapper=mapper,
 	)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
@@ -118,18 +108,14 @@ async def test_form_intelligence_initializes_form_session_on_first_iteration(tes
 	assert out_ctx.form_session.page_index == 0
 	assert out_ctx.form_session.detection.platform_id in {"generic", "greenhouse", "workday", "lever", "ashby"}
 	assert len(out_ctx.form_session.all_fields) == 1
-	assert len(out_ctx.form_session.all_instructions) == 1
+	assert len(out_ctx.form_session.all_instructions) == 0
 	assert page.goto_calls == 1
 
 
 async def test_form_intelligence_reuses_existing_session_without_navigation(test_config: Any) -> None:
-	base_dir = Path(test_config.base_dir)
-	(base_dir / "user_profile.json").write_text("{}", encoding="utf-8")
-
 	page = MockPage(html="<html><body>clean</body></html>")
 	page.url = "https://example.com/apply"
 	extractor = StubExtractor([_field()])
-	mapper = StubMapper([_instruction()])
 
 	existing_session = FormSession(
 		detection=DetectionResult(
@@ -148,7 +134,6 @@ async def test_form_intelligence_reuses_existing_session_without_navigation(test
 		llm_client=object(),
 		page=page,
 		form_extractor=extractor,
-		field_mapper=mapper,
 	)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=ctx.model_dump()))
@@ -159,22 +144,16 @@ async def test_form_intelligence_reuses_existing_session_without_navigation(test
 	assert out_ctx.form_intelligence.page_index == 1
 	assert page.goto_calls == 0
 	assert extractor.calls == 1
-	assert mapper.calls == 1
 
 
 async def test_form_intelligence_fails_when_no_fields_extracted(test_config: Any) -> None:
-	base_dir = Path(test_config.base_dir)
-	(base_dir / "user_profile.json").write_text("{}", encoding="utf-8")
-
 	page = MockPage(html="<html><body>clean</body></html>")
 	extractor = StubExtractor([])
-	mapper = StubMapper([])
 	stage = FormIntelligenceStage(
 		test_config,
 		llm_client=object(),
 		page=page,
 		form_extractor=extractor,
-		field_mapper=mapper,
 	)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
@@ -183,19 +162,16 @@ async def test_form_intelligence_fails_when_no_fields_extracted(test_config: Any
 	assert result.error_type == "ExtractionError"
 
 
-async def test_form_intelligence_fails_when_profile_missing(test_config: Any) -> None:
+async def test_form_intelligence_does_not_require_profile_file(test_config: Any) -> None:
 	page = MockPage(html="<html><body>clean</body></html>")
 	extractor = StubExtractor([_field()])
-	mapper = StubMapper([_instruction()])
 	stage = FormIntelligenceStage(
 		test_config,
 		llm_client=object(),
 		page=page,
 		form_extractor=extractor,
-		field_mapper=mapper,
 	)
 
 	result = await stage.execute(Message(run_id="acme_123", payload=_ctx().model_dump()))
 
-	assert not result.success
-	assert result.error_type == "ConfigError"
+	assert result.success

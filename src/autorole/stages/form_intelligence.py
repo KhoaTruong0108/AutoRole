@@ -2,22 +2,15 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
-
-from pydantic import BaseModel, Field
 
 from autorole.config import AppConfig
 from autorole.context import FormIntelligenceResult, FormSession, JobApplicationContext
 from autorole.integrations.form_controls.adapters import get_adapter
 from autorole.integrations.form_controls.adapters.base import PageSection
 from autorole.integrations.form_controls.detector import detect
-from autorole.integrations.form_controls.exceptions import MappingError
 from autorole.integrations.form_controls.extractor import SemanticFieldExtractor
-from autorole.integrations.form_controls.mapper import AIFieldMapper
-from autorole.integrations.form_controls.models import ExtractedField, FillInstruction
-from autorole.integrations.form_controls.profile import load_profile
-from autorole.integrations.llm import LLMClient
+from autorole.integrations.form_controls.models import ExtractedField
 from autorole.stage_base import AutoRoleStage
 
 try:
@@ -59,11 +52,6 @@ except Exception:
 MAX_CAPTCHA_ATTEMPTS = 2
 
 
-class QuestionnaireAnswers(BaseModel):
-	answers: list[dict[str, str]] = Field(default_factory=list)
-	unanswered_required: list[str] = Field(default_factory=list)
-
-
 class CaptchaSolver:
 	def __init__(self, api_key: str = "", service: str = "2captcha") -> None:
 		self._api_key = api_key
@@ -81,20 +69,16 @@ class FormIntelligenceStage(Stage):
 	def __init__(
 		self,
 		config: AppConfig,
-		llm_client: LLMClient,
+		llm_client: Any,
 		page: Any,
 		captcha_solver: CaptchaSolver | None = None,
 		form_extractor: Any | None = None,
-		field_mapper: Any | None = None,
-		use_random_questionnaire_answers: bool = False,
 	) -> None:
 		self._config = config
-		self._llm = llm_client
+		_ = llm_client
 		self._page = page
 		self._captcha_solver = captcha_solver
 		self._extractor = form_extractor or SemanticFieldExtractor(page)
-		self._mapper = field_mapper or AIFieldMapper(llm_client)
-		self._use_random_questionnaire_answers = use_random_questionnaire_answers
 
 	async def execute(self, message: Message) -> StageResult:
 		ctx = JobApplicationContext.model_validate(message.payload)
@@ -103,15 +87,6 @@ class FormIntelligenceStage(Stage):
 				"FormIntelligenceStage: ctx.listing and ctx.packaged must be set",
 				"PreconditionError",
 			)
-
-		profile_path = Path(self._config.base_dir).expanduser() / "user_profile.json"
-		if not profile_path.exists():
-			return StageResult.fail("user_profile.json not found", "ConfigError")
-
-		try:
-			profile = load_profile(profile_path)
-		except Exception as exc:
-			return StageResult.fail(f"Failed to load user profile: {exc}", "ConfigError")
 
 		apply_url = ctx.listing.apply_url or ctx.listing.job_url
 
@@ -192,37 +167,18 @@ class FormIntelligenceStage(Stage):
 				"ExtractionError",
 			)
 
-		try:
-			instructions = await self._map_fields(fields, profile, message.run_id, page_index)
-		except MappingError as exc:
-			return StageResult.fail(str(exc), "MappingError")
-		except Exception as exc:
-			return StageResult.fail(f"Mapping failed: {exc}", "MappingError")
-
 		fi = FormIntelligenceResult(
 			page_index=page_index,
 			page_label=page_section.label,
 			extracted_fields=fields,
-			fill_instructions=instructions,
+			fill_instructions=[],
 			generated_at=datetime.now(timezone.utc),
 		)
 
 		form_session.all_fields.extend(fields)
-		form_session.all_instructions.extend(instructions)
 		return StageResult.ok(
 			ctx.model_copy(update={"form_intelligence": fi, "form_session": form_session})
 		)
-
-	async def _map_fields(
-		self,
-		fields: list[ExtractedField],
-		profile: Any,
-		run_id: str,
-		page_index: int,
-	) -> list[FillInstruction]:
-		if self._use_random_questionnaire_answers:
-			return _build_random_instructions(fields, run_id, page_index)
-		return await self._mapper.map(fields, profile, run_id, page_index)
 
 
 async def _detect_captcha(page: Any) -> str | None:
@@ -258,47 +214,6 @@ async def _needs_navigation_rehydrate(page: Any) -> bool:
 	return html in {"<html><head></head><body></body></html>", "<html><body></body></html>"}
 
 
-def _build_random_instructions(
-	fields: list[ExtractedField],
-	run_id: str,
-	page_index: int,
-) -> list[FillInstruction]:
-	instructions: list[FillInstruction] = []
-	for field in fields:
-		value: str | None
-		action = "fill"
-		source = "generated"
-		if field.field_type in {"select", "radio", "combobox_lazy"}:
-			if field.options:
-				value = field.options[0]
-				source = "profile_inferred"
-			elif field.required:
-				value = "N/A"
-			else:
-				action = "skip"
-				value = None
-				source = "no_match"
-		elif field.field_type == "checkbox":
-			value = ",".join(field.options[:1]) if field.options else ""
-		elif field.field_type in {"hidden", "file"}:
-			action = "skip"
-			value = None
-			source = "no_match"
-		else:
-			value = "Test Value"
-		instructions.append(
-			FillInstruction(
-				field_id=field.id,
-				run_id=run_id,
-				action=action,
-				value=value,
-				source=source,
-				page_index=page_index,
-			)
-		)
-	return instructions
-
-
 class FormIntelligenceExecutor(AutoRoleStage):
 	name = "form_intelligence"
 
@@ -315,7 +230,7 @@ class FormIntelligenceExecutor(AutoRoleStage):
 		)
 		self._write_artifact(
 			f"page_{fi.page_index}_{page_label}_instructions.json",
-			json.dumps([item.model_dump(mode="json") for item in fi.fill_instructions], indent=2) + "\n",
+			json.dumps([], indent=2) + "\n",
 			ctx.run_id,
 		)
 

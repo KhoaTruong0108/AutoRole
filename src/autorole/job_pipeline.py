@@ -25,6 +25,7 @@ from autorole.queue import (
     DEAD_LETTER_Q,
     EXPLORING_Q,
     FORM_INTEL_Q,
+    LLM_FIELD_COMPLETER_Q,
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
@@ -36,6 +37,7 @@ from autorole.stage_base import STAGE_ORDER
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
+from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
 from autorole.stages.packaging import PackagingStage
 from autorole.stages.scoring import ScoringStage
@@ -45,6 +47,7 @@ from autorole.workers import WorkerConfig
 from autorole.workers.concluding import ConcludingWorker
 from autorole.workers.exploring import ExploringWorker
 from autorole.workers.form_intelligence import FormIntelligenceWorker
+from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
 from autorole.workers.qualification import QualificationWorker
@@ -134,6 +137,7 @@ def _stage_to_queue(stage_name: str) -> str:
         "packaging": PACKAGING_Q,
         "session": SESSION_Q,
         "form_intelligence": FORM_INTEL_Q,
+        "llm_field_completer": LLM_FIELD_COMPLETER_Q,
         "form_submission": FORM_SUB_Q,
         "concluding": CONCLUDING_Q,
     }
@@ -146,7 +150,8 @@ def _next_reply_queue(input_queue: str) -> str:
         SCORING_Q: PACKAGING_Q,
         PACKAGING_Q: SESSION_Q,
         SESSION_Q: FORM_INTEL_Q,
-        FORM_INTEL_Q: FORM_SUB_Q,
+        FORM_INTEL_Q: LLM_FIELD_COMPLETER_Q,
+        LLM_FIELD_COMPLETER_Q: FORM_SUB_Q,
         FORM_SUB_Q: CONCLUDING_Q,
         CONCLUDING_Q: CONCLUDING_Q,
     }
@@ -160,6 +165,7 @@ def _queue_stage_name(queue_name: str) -> str:
         PACKAGING_Q: "packaging",
         SESSION_Q: "session",
         FORM_INTEL_Q: "form_intelligence",
+        LLM_FIELD_COMPLETER_Q: "llm_field_completer",
         FORM_SUB_Q: "form_submission",
         CONCLUDING_Q: "concluding",
     }
@@ -456,9 +462,18 @@ class JobApplicationPipeline:
                     cfg,
                     llm_client,
                     form_page,
+                ),
+                config=wc(FORM_INTEL_Q, LLM_FIELD_COMPLETER_Q),
+                on_block=tracker.on_failure,
+                **shared,
+            )
+            workers["llm_field_completer"] = LLMFieldCompleterWorker(
+                stage=LLMFieldCompleterStage(
+                    cfg,
+                    llm_client,
                     use_random_questionnaire_answers=self._rc.mode in {"observe"},
                 ),
-                config=wc(FORM_INTEL_Q, FORM_SUB_Q),
+                config=wc(LLM_FIELD_COMPLETER_Q, FORM_SUB_Q),
                 on_block=tracker.on_failure,
                 **shared,
             )

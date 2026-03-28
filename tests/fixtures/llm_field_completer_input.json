@@ -1,6 +1,6 @@
 {
   "run_id": "earnin_7440771",
-  "started_at": "2026-03-28T04:14:26.704096Z",
+  "started_at": "2026-03-27T01:18:02.637805Z",
   "listing": {
     "job_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
     "apply_url": "https://job-boards.greenhouse.io/earnin/jobs/7440771",
@@ -8,7 +8,7 @@
     "job_id": "7440771",
     "job_title": "Senior Staff Software Engineer",
     "platform": "greenhouse",
-    "crawled_at": "2026-03-28T04:14:26.704011Z"
+    "crawled_at": "2026-03-27T01:18:02.637765Z"
   },
   "score": {
     "resume_id": "master",
@@ -45,13 +45,13 @@
         "We\u2019re building a product that reimagines the way money moves to empower human potential."
       ]
     },
-    "overall_score": 0.8815,
+    "overall_score": 0.85,
     "criteria_scores": {
       "technical_skills": 0.85,
-      "experience_depth": 0.92,
-      "seniority_alignment": 0.88,
-      "domain_relevance": 0.95,
-      "culture_fit": 0.78
+      "experience_depth": 0.8,
+      "seniority_alignment": 0.95,
+      "domain_relevance": 0.9,
+      "culture_fit": 0.7
     },
     "matched": [
       "technical_skills",
@@ -61,26 +61,26 @@
       "culture_fit"
     ],
     "mismatched": [],
-    "scored_at": "2026-03-28T04:15:38.497826Z"
+    "scored_at": "2026-03-27T01:19:11.952605Z"
   },
   "tailored": {
-    "resume_id": "e38237c9-0984-4e40-84b6-c1cfef7318dc",
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
     "parent_resume_id": "master",
     "tailoring_degree": 0,
-    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_e38237c9.md",
+    "file_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.md",
     "diff_summary": "{\"tailoring_degree\":0,\"overall_delta\":0.0,\"sections\":[],\"total_changes\":0}",
-    "tailored_at": "2026-03-28T04:15:38.501425Z"
+    "tailored_at": "2026-03-27T01:19:11.954514Z"
   },
   "packaged": {
-    "resume_id": "e38237c9-0984-4e40-84b6-c1cfef7318dc",
-    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_e38237c9.pdf",
-    "packaged_at": "2026-03-28T04:15:38.989789Z"
+    "resume_id": "12f016d4-abfc-4447-84f9-04e42252a9c9",
+    "pdf_path": "/Users/khoatruong0108/.autorole/resumes/earnin_7440771_v1_12f016d4.pdf",
+    "packaged_at": "2026-03-27T01:19:12.388237Z"
   },
   "session": {
     "platform": "greenhouse",
     "authenticated": false,
     "session_note": "public platform - no authentication required",
-    "established_at": "2026-03-28T04:15:38.990485Z"
+    "established_at": "2026-03-27T01:19:12.388823Z"
   },
   "form_intelligence": {
     "page_index": 0,
@@ -979,389 +979,12 @@
         "extraction_source": "dom"
       }
     ],
-    "fill_instructions": [
-      {
-        "field_id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Alex",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "528e7973-e55b-55e7-b71d-38b334712979",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Nguyen",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "alex.nguyen.dev@example.com",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "United States +1",
-        "source": "profile_inferred",
-        "page_index": 0
-      },
-      {
-        "field_id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "f55bf017-de32-5615-9834-f3013f8f3073",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "+1-415-555-0188",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "ac691e3c-394d-516d-9383-0e3a781ba589",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b80af6b7-b175-5684-b232-e043f0217509",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "yes",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "no",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b8375f67-a29b-58f0-a193-8eab417992ae",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "245 Mission Street, Apt 1204, San Francisco, CA 94105",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
-        "run_id": "earnin_7440771",
-        "action": "human_review",
-        "value": "No",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      }
-    ],
-    "generated_at": "2026-03-28T04:15:52.560569Z",
+    "fill_instructions": [],
+    "generated_at": "2026-03-28T04:24:36.529690Z",
     "questionnaire": [],
     "form_json_filled": {}
   },
-  "llm_field_completion": {
-    "page_index": 0,
-    "page_label": "Application form",
-    "fill_instructions": [
-      {
-        "field_id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Alex",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "528e7973-e55b-55e7-b71d-38b334712979",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Nguyen",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "alex.nguyen.dev@example.com",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "United States +1",
-        "source": "profile_inferred",
-        "page_index": 0
-      },
-      {
-        "field_id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "f55bf017-de32-5615-9834-f3013f8f3073",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "+1-415-555-0188",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "ac691e3c-394d-516d-9383-0e3a781ba589",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b80af6b7-b175-5684-b232-e043f0217509",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "yes",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "no",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b8375f67-a29b-58f0-a193-8eab417992ae",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "245 Mission Street, Apt 1204, San Francisco, CA 94105",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
-        "run_id": "earnin_7440771",
-        "action": "human_review",
-        "value": "No",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      }
-    ],
-    "generated_at": "2026-03-28T04:21:27.320163Z",
-    "questionnaire": [],
-    "form_json_filled": {}
-  },
+  "llm_field_completion": null,
   "form_session": {
     "detection": {
       "run_id": "earnin_7440771",
@@ -2265,192 +1888,7 @@
         "extraction_source": "dom"
       }
     ],
-    "all_instructions": [
-      {
-        "field_id": "ba13e9bc-a72e-5895-b0e2-e568371cb712",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Alex",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "528e7973-e55b-55e7-b71d-38b334712979",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "Nguyen",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "46c8afa3-8af8-52a4-a764-1f3dd410776f",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "alex.nguyen.dev@example.com",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "acc007f5-7418-5350-bd63-7a5a0ec47b27",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "United States +1",
-        "source": "profile_inferred",
-        "page_index": 0
-      },
-      {
-        "field_id": "c1ffcc43-21b1-5f3a-a215-adc2d2c09b57",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "f55bf017-de32-5615-9834-f3013f8f3073",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "+1-415-555-0188",
-        "source": "profile_direct",
-        "page_index": 0
-      },
-      {
-        "field_id": "ac691e3c-394d-516d-9383-0e3a781ba589",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b80af6b7-b175-5684-b232-e043f0217509",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "744c56a3-9a9c-516b-ac0f-b8743d8ee701",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfcc1f18-431e-57f5-afc2-fc01bacaca45",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "yes",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "4c2e5853-0035-55d0-ae09-12ee3cf8b6cb",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "08949148-9c42-5d6f-8775-6f302b7cb5d2",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "no",
-        "source": "human_filled",
-        "page_index": 0
-      },
-      {
-        "field_id": "53d87c9b-6748-5b5f-9b29-3e53577d11ef",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "8a54c549-f1f9-545b-ac9e-f442953e9771",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "b8375f67-a29b-58f0-a193-8eab417992ae",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "a96deb23-5e58-5b2b-8fbc-4d9d8186b1a8",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "245 Mission Street, Apt 1204, San Francisco, CA 94105",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "f61f8094-3dbe-562f-9da4-7ee7284d7d04",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "844aa75e-43e3-5e37-8b72-9715eccba0cd",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "37422628-2448-5dd7-9dc6-5bffd284bd66",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "cfffb480-22ca-5682-8eb6-cce9e7cb9814",
-        "run_id": "earnin_7440771",
-        "action": "fill",
-        "value": "N/A",
-        "source": "generated",
-        "page_index": 0
-      },
-      {
-        "field_id": "deb0db2b-86f9-5f1a-9fd0-c2e291003931",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "0ef88389-c3b5-5bf5-a6aa-00fa24d3fe23",
-        "run_id": "earnin_7440771",
-        "action": "human_review",
-        "value": "No",
-        "source": "no_match",
-        "page_index": 0
-      },
-      {
-        "field_id": "818f8ac2-f6f4-57c6-8a6e-a3d967b94a30",
-        "run_id": "earnin_7440771",
-        "action": "skip",
-        "value": null,
-        "source": "no_match",
-        "page_index": 0
-      }
-    ],
+    "all_instructions": [],
     "all_outcomes": [],
     "last_advance_action": "next_page",
     "screenshots": []

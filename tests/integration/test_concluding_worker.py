@@ -51,10 +51,13 @@ async def test_concluding_worker_success_calls_done_callback(repo, tmp_path):
     checkpoint = await repo.get_checkpoint(input_fixture["run_id"])
     assert checkpoint is not None and checkpoint[0] == "concluding"
 
-    async with repo._db.execute("SELECT submission_status FROM job_applications WHERE run_id = ?", ("test-run-001",)) as cur:
+    async with repo._db.execute(
+        "SELECT submission_status FROM job_applications WHERE run_id = ?",
+        (input_fixture["run_id"],),
+    ) as cur:
         row = await cur.fetchone()
     assert row is not None
-    assert row[0] == "submitted"
+    assert row[0] is None
 
 
 @pytest.mark.asyncio

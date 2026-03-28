@@ -74,6 +74,7 @@ async def test_qualification_worker_success(repo, tmp_path):
 async def test_qualification_worker_loop_then_pass(repo, tmp_path):
     input_fixture = load_fixture("qualification_input.json")
     loop_ctx = load_fixture("packaging_input.json")
+    loop_ctx["tailored"]["tailoring_degree"] = 1
     pass_ctx = load_fixture("packaging_input.json")
     pass_ctx["tailored"]["tailoring_degree"] = 0
 
@@ -110,6 +111,7 @@ async def test_qualification_worker_loop_then_pass(repo, tmp_path):
 async def test_qualification_worker_block_after_max_attempts(repo, tmp_path):
     input_fixture = load_fixture("qualification_input.json")
     loop_ctx = load_fixture("packaging_input.json")
+    loop_ctx["tailored"]["tailoring_degree"] = 1
 
     scoring = _SequenceStage([_result(True, loop_ctx), _result(True, loop_ctx)])
     tailoring = _SequenceStage([_result(True, loop_ctx), _result(True, loop_ctx)])
