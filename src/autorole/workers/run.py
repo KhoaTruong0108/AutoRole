@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ import aiosqlite
 from autorole.config import AppConfig
 from autorole.db.repository import JobRepository
 from autorole.integrations.credentials import CredentialStore
+from autorole.integrations.discovery import build_discovery_providers
 from autorole.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
 from autorole.integrations.renderer import PandocRenderer, WeasyPrintRenderer
 from autorole.queue import (
@@ -86,10 +88,29 @@ async def _build_worker(stage_name: str, repo: JobRepository, logger: logging.Lo
     score_page = await context.new_page()
     form_page = await context.new_page()
 
+    async def render_html(url: str) -> str:
+        await scrape_page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        if "remoteok.com" in url:
+            with contextlib.suppress(Exception):
+                await scrape_page.wait_for_selector(
+                    "tr.job[data-id], tr.job[id^='job-']",
+                    timeout=5_000,
+                )
+            await scrape_page.wait_for_timeout(1_500)
+        return await scrape_page.content()
+
     shared = {"repo": repo, "logger": logger, "artifacts_root": artifacts_root}
     if stage_name == "exploring":
         return ExploringWorker(
-            stage=ExploringStage(cfg, scrapers={}),
+            stage=ExploringStage(
+                cfg,
+                scrapers={},
+                discovery_providers=build_discovery_providers(
+                    cfg.search.platforms,
+                    llm_client=llm_client,
+                    render_html=render_html,
+                ),
+            ),
             config=_worker_config(EXPLORING_Q, SCORING_Q),
             **shared,
         )

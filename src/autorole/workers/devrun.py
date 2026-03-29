@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
 from pathlib import Path
@@ -13,6 +14,7 @@ from autorole.config import AppConfig
 from autorole.context import JobApplicationContext
 from autorole.db.repository import JobRepository
 from autorole.integrations.credentials import CredentialStore
+from autorole.integrations.discovery import build_discovery_providers
 from autorole.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
 from autorole.integrations.renderer import PandocRenderer, WeasyPrintRenderer
 from autorole.integrations.scrapers.indeed import IndeedScraper
@@ -103,6 +105,51 @@ def _build_message(
     )
 
 
+async def _drain_queue(queue: InMemoryQueueBackend, queue_name: str) -> list[Message]:
+    messages: list[Message] = []
+    while True:
+        message = await queue.pull(queue_name)
+        if message is None:
+            break
+        messages.append(message)
+    return messages
+
+
+def _listing_summary(payload: dict[str, Any]) -> dict[str, Any] | None:
+    listing = payload.get("listing")
+    if not isinstance(listing, dict):
+        return None
+    return {
+        "company_name": listing.get("company_name"),
+        "job_title": listing.get("job_title"),
+        "platform": listing.get("platform"),
+        "job_id": listing.get("job_id"),
+        "job_url": listing.get("job_url"),
+    }
+
+
+def _print_json_block(prefix: str, payload: dict[str, Any]) -> None:
+    rendered = json.dumps(payload, indent=2, ensure_ascii=False)
+    for line in rendered.splitlines():
+        print(f"{prefix}{line}")
+
+
+def _effective_search_platforms(cfg: AppConfig, payload: dict[str, Any], stage: str) -> list[str]:
+    if stage != "exploring":
+        return list(cfg.search.platforms)
+
+    search_config = payload.get("search_config")
+    if not isinstance(search_config, dict):
+        return list(cfg.search.platforms)
+
+    raw_platforms = search_config.get("platforms")
+    if not isinstance(raw_platforms, list):
+        return list(cfg.search.platforms)
+
+    platforms = [str(platform).strip() for platform in raw_platforms if str(platform).strip()]
+    return platforms or list(cfg.search.platforms)
+
+
 async def _build_worker(
     stage: str,
     cfg: AppConfig,
@@ -111,6 +158,7 @@ async def _build_worker(
     artifacts_root: Path,
     *,
     headless: bool,
+    search_platforms: list[str] | None = None,
 ) -> tuple[StageWorker, Any, Any, Any]:
     llm_client = _make_llm_client(cfg)
     renderer = _make_renderer(cfg)
@@ -129,8 +177,20 @@ async def _build_worker(
         browser = await playwright.chromium.launch(headless=headless)
         context = await browser.new_context()
         page = await context.new_page()
+
+        async def render_html(url: str) -> str:
+            await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+            if "remoteok.com" in url:
+                with contextlib.suppress(Exception):
+                    await page.wait_for_selector(
+                        "tr.job[data-id], tr.job[id^='job-']",
+                        timeout=5_000,
+                    )
+                await page.wait_for_timeout(1_500)
+            return await page.content()
     else:
         playwright = browser = context = page = None
+        render_html = None
 
     shared = {
         "repo": repo,
@@ -140,11 +200,20 @@ async def _build_worker(
     }
 
     if stage == "exploring":
+        active_platforms = search_platforms or list(cfg.search.platforms)
         scrapers = {
             "linkedin": LinkedInScraper(page),
             "indeed": IndeedScraper(page),
         }
-        worker = ExploringWorker(stage=ExploringStage(cfg, scrapers=scrapers), **shared)
+        discovery_providers = build_discovery_providers(
+            active_platforms,
+            llm_client=llm_client,
+            render_html=render_html,
+        )
+        worker = ExploringWorker(
+            stage=ExploringStage(cfg, scrapers=scrapers, discovery_providers=discovery_providers),
+            **shared,
+        )
     elif stage == "qualification":
         worker = QualificationWorker(
             scoring_stage=ScoringStage(cfg, llm_client, page),
@@ -266,6 +335,7 @@ async def amain() -> int:
             logger,
             artifacts_root,
             headless=args.headless,
+            search_platforms=_effective_search_platforms(cfg, payload, args.stage),
         )
 
         await _prepare_stage_page(args.stage, payload, page)
@@ -293,15 +363,15 @@ async def amain() -> int:
             except Exception:
                 pass
 
-        out = await queue.pull(reply_q)
-        dlq = await queue.pull(DEAD_LETTER_Q)
+        outputs = await _drain_queue(queue, reply_q)
+        dlq_messages = await _drain_queue(queue, DEAD_LETTER_Q)
         loop_q = FORM_INTEL_Q if args.stage == "form_submission" else input_q
-        loop_msg = await queue.pull(loop_q)
+        loop_messages = await _drain_queue(queue, loop_q)
 
         decision = "pass"
-        if dlq is not None:
+        if dlq_messages:
             decision = "block"
-        elif loop_msg is not None and (args.stage == "form_submission" or loop_msg.attempt > 1):
+        elif loop_messages and (args.stage == "form_submission" or loop_messages[0].attempt > 1):
             decision = "loop"
 
         print(f"=== devrun: {args.stage} ===")
@@ -309,16 +379,31 @@ async def amain() -> int:
         print(f"decision: {decision}")
         print("")
         print(f"[output queue: {reply_q}]")
-        if out is None:
+        if not outputs:
             print("  empty")
         else:
-            keys = ", ".join(sorted(out.payload.keys())) if isinstance(out.payload, dict) else type(out.payload).__name__
-            print(f"  message_id: {out.message_id}")
-            print(f"  payload keys: {keys}")
+            print(f"  count: {len(outputs)}")
+            for index, out in enumerate(outputs, start=1):
+                keys = ", ".join(sorted(out.payload.keys())) if isinstance(out.payload, dict) else type(out.payload).__name__
+                print(f"  [{index}] message_id: {out.message_id}")
+                print(f"      run_id: {out.run_id}")
+                print(f"      payload keys: {keys}")
+                if isinstance(out.payload, dict):
+                    summary = _listing_summary(out.payload)
+                    if summary is not None:
+                        print("      success listing:")
+                        _print_json_block("        ", summary)
+                    print("      next-stage input payload:")
+                    _print_json_block("        ", out.payload)
 
         print("")
         print("[dead_letter_q]")
-        print("  empty" if dlq is None else f"  message_id: {dlq.message_id}")
+        if not dlq_messages:
+            print("  empty")
+        else:
+            print(f"  count: {len(dlq_messages)}")
+            for dlq in dlq_messages:
+                print(f"  message_id: {dlq.message_id}")
 
         print("")
         print("[artifacts]")

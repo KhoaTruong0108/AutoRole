@@ -15,6 +15,7 @@ from autorole.config import AppConfig
 from autorole.context import JobApplicationContext
 from autorole.db.repository import JobRepository
 from autorole.integrations.credentials import CredentialStore
+from autorole.integrations.discovery import build_discovery_providers
 from autorole.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
 from autorole.integrations.renderer import PandocRenderer, WeasyPrintRenderer
 from autorole.integrations.scrapers.indeed import IndeedScraper
@@ -202,6 +203,8 @@ class _CompletionTracker:
 
     def set_expected(self, expected: int) -> None:
         self.expected = max(1, expected)
+        if self.completed >= self.expected:
+            self.event.set()
 
     def on_success(self, run_id: str) -> None:
         _ = run_id
@@ -284,6 +287,17 @@ class JobApplicationPipeline:
                     score_page = await browser_context.new_page()
                     form_page = await browser_context.new_page()
 
+                    async def render_html(url: str) -> str:
+                        await scrape_page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                        if "remoteok.com" in url:
+                            with contextlib.suppress(Exception):
+                                await scrape_page.wait_for_selector(
+                                    "tr.job[data-id], tr.job[id^='job-']",
+                                    timeout=5_000,
+                                )
+                            await scrape_page.wait_for_timeout(1_500)
+                        return await scrape_page.content()
+
                     scrapers: dict[str, Any] = {}
                     if "linkedin" in platforms:
                         scrapers["linkedin"] = LinkedInScraper(scrape_page)
@@ -296,7 +310,16 @@ class JobApplicationPipeline:
                         exploring_stage = ManualUrlExploringStage(config, extractor=extractor, platform_hint=platform_hint)
                         seed_payload: dict[str, Any] = {"job_url": rc.job_url.strip(), "max_listings": rc.max_listings}
                     else:
-                        exploring_stage = ExploringStage(config, scrapers=scrapers)
+                        discovery_providers = build_discovery_providers(
+                            platforms,
+                            llm_client=llm_client,
+                            render_html=render_html,
+                        )
+                        exploring_stage = ExploringStage(
+                            config,
+                            scrapers=scrapers,
+                            discovery_providers=discovery_providers,
+                        )
                         seed_payload = {"search_config": search_config, "max_listings": rc.max_listings}
 
                     workers = self._build_workers(

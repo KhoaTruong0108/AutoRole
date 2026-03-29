@@ -6,7 +6,7 @@ from autorole.config import AppConfig
 from autorole.config import SearchFilter
 from autorole.context import JobListing
 from autorole.integrations.scrapers import register_scraper
-from autorole.integrations.scrapers.base import ATSScraper
+from autorole.integrations.scrapers.base import ATSScraper, JobDiscoveryProvider
 from autorole.integrations.scrapers.models import ApplicationForm, JobDescription, JobMetadata
 from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
 
@@ -24,6 +24,15 @@ class MockScraper:
 		self._listings = listings
 
 	async def search(self, filters: object) -> list[JobListing]:
+		_ = filters
+		return self._listings
+
+
+class MockDiscoveryProvider(JobDiscoveryProvider):
+	def __init__(self, listings: list[JobListing]) -> None:
+		self._listings = listings
+
+	async def search(self, filters: SearchFilter) -> list[JobListing]:
 		_ = filters
 		return self._listings
 
@@ -241,4 +250,46 @@ async def test_exploring_resolves_apply_url_when_metadata_missing_it() -> None:
 	ctx = result.output[0]
 	assert ctx.listing.job_url == "https://jobs.lever.co/acme/2002"
 	assert ctx.listing.apply_url == "https://jobs.lever.co/acme/2002/apply"
+
+
+async def test_exploring_uses_discovery_provider_when_registered() -> None:
+	listing = JobListing(
+		job_url="https://mastercard.wd1.myworkdayjobs.com/CorporateCareers/job/Austin-Texas/Platform-Engineer_JR123",
+		apply_url="https://mastercard.wd1.myworkdayjobs.com/CorporateCareers/job/Austin-Texas/Platform-Engineer_JR123",
+		company_name="Mastercard",
+		job_id="Platform-Engineer_JR123",
+		job_title="Platform Engineer",
+		platform="workday",
+		crawled_at=datetime.now(timezone.utc),
+	)
+	stage = ExploringStage(
+		AppConfig(),
+		scrapers={},
+		discovery_providers={"workday": MockDiscoveryProvider([listing])},
+	)
+	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["workday"], "keywords": ["platform engineer"]}})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	assert len(result.output) == 1
+	ctx = result.output[0]
+	assert ctx.run_id == "mastercard_Platform-Engineer_JR123"
+	assert ctx.listing.platform == "workday"
+
+
+async def test_exploring_dedupes_provider_and_scraper_results() -> None:
+	listing = _listing("Acme Corp", "456")
+	listing = listing.model_copy(update={"apply_url": listing.job_url})
+	stage = ExploringStage(
+		AppConfig(),
+		scrapers={"mock": MockScraper([listing])},
+		discovery_providers={"workday": MockDiscoveryProvider([listing])},
+	)
+	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["mock", "workday"]}})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	assert len(result.output) == 1
 

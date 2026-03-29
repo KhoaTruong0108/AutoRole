@@ -25,7 +25,18 @@ dependencies = [
   "openai>=1.30",
   "anthropic>=0.25",
   "markdown>=3.5",
+  "pyyaml>=6.0",
+  "python-jobspy>=1.1.79",
+  "pandas>=2.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autorole"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/autorole/integrations/discovery/sites.yaml" = "autorole/integrations/discovery/sites.yaml"
+"src/autorole/integrations/discovery/config/employers.yaml" = "autorole/integrations/discovery/config/employers.yaml"
+"src/autorole/integrations/discovery/config/sites.yaml" = "autorole/integrations/discovery/config/sites.yaml"
 
 [project.urls]
 Homepage = "https://github.com/KhoaTruong0108/AutoRole"

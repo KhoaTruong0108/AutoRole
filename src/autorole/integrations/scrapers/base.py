@@ -14,6 +14,12 @@ class JobBoardScraper(ABC):
 		"""Return discovered job listings for the given search filters."""
 
 
+class JobDiscoveryProvider(ABC):
+	@abstractmethod
+	async def search(self, filters: SearchFilter) -> list[JobListing]:
+		"""Return discovered job listings from provider-backed discovery."""
+
+
 class ATSScraper(ABC):
 	"""ATS-aware scraper contract across exploring, scoring, and form phases."""
 

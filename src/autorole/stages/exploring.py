@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -8,7 +9,7 @@ from urllib.parse import urlparse, urlunparse
 from autorole.config import AppConfig, SearchFilter
 from autorole.context import JobApplicationContext, JobListing
 from autorole.integrations.scrapers import get_scraper
-from autorole.integrations.scrapers.base import JobBoardScraper, JobPostingExtractor
+from autorole.integrations.scrapers.base import JobBoardScraper, JobDiscoveryProvider, JobPostingExtractor
 from autorole.integrations.scrapers.detection import detect_ats
 
 
@@ -70,34 +71,33 @@ class ExploringStage(Stage):
 		self,
 		config: AppConfig,
 		scrapers: dict[str, JobBoardScraper],
+		discovery_providers: dict[str, JobDiscoveryProvider] | None = None,
 		ats_pages: dict[str, Any] | None = None,
 	) -> None:
 		self._config = config
 		self._scrapers = scrapers
+		self._discovery_providers = discovery_providers or {}
 		self._ats_pages = ats_pages or {}
 		self._log = logging.getLogger(__name__)
 
-	async def execute(self, message: Message) -> StageResult:
+	def source_names(self, message: Message) -> list[str]:
 		payload = message.payload if isinstance(message.payload, dict) else {}
 		search = SearchFilter.model_validate(payload.get("search_config", {}))
+		return [platform for platform in search.platforms if platform]
 
-		listings: list[JobListing] = []
+	async def iter_source_listings(self, message: Message) -> AsyncIterator[tuple[str, list[JobListing]]]:
+		payload = message.payload if isinstance(message.payload, dict) else {}
+		search = SearchFilter.model_validate(payload.get("search_config", {}))
 		for platform in search.platforms:
-			scraper = self._scrapers.get(platform)
-			if scraper is not None:
-				try:
-					listings.extend(await scraper.search(search))
-				except Exception as exc:
-					self._log.warning("scraper_failed", extra={"platform": platform, "error": str(exc)})
-				continue
+			listings = await self._search_platform(platform, search)
+			yield platform, _dedupe_listings(listings)
 
-			try:
-				listings.extend(await _search_via_ats_registry(platform, search, self._ats_pages.get(platform)))
-			except Exception as exc:
-				self._log.warning(
-					"ats_scraper_failed",
-					extra={"platform": platform, "error": str(exc)},
-				)
+	async def execute(self, message: Message) -> StageResult:
+		listings: list[JobListing] = []
+		async for _source_name, source_listings in self.iter_source_listings(message):
+			listings.extend(source_listings)
+
+		listings = _dedupe_listings(listings)
 
 		if not listings:
 			return StageResult.fail(
@@ -107,6 +107,29 @@ class ExploringStage(Stage):
 
 		contexts = [JobApplicationContext(run_id=_make_run_id(listing), listing=listing) for listing in listings]
 		return StageResult.ok(output=contexts)
+
+	async def _search_platform(self, platform: str, search: SearchFilter) -> list[JobListing]:
+		scraper = self._scrapers.get(platform)
+		if scraper is not None:
+			try:
+				return await scraper.search(search)
+			except Exception as exc:
+				self._log.warning("scraper_failed platform=%s reason=%s", platform, exc)
+				return []
+
+		discovery_provider = self._discovery_providers.get(platform)
+		if discovery_provider is not None:
+			try:
+				return await discovery_provider.search(search)
+			except Exception as exc:
+				self._log.warning("discovery_provider_failed platform=%s reason=%s", platform, exc)
+				return []
+
+		try:
+			return await _search_via_ats_registry(platform, search, self._ats_pages.get(platform))
+		except Exception as exc:
+			self._log.warning("ats_scraper_failed platform=%s reason=%s", platform, exc)
+			return []
 
 
 class ManualUrlExploringStage(Stage):
@@ -150,6 +173,18 @@ class ManualUrlExploringStage(Stage):
 
 		ctx = JobApplicationContext(run_id=_make_run_id(listing), listing=listing)
 		return StageResult.ok(output=[ctx])
+
+
+def _dedupe_listings(listings: list[JobListing]) -> list[JobListing]:
+	seen: set[str] = set()
+	unique: list[JobListing] = []
+	for listing in listings:
+		key = (listing.apply_url or listing.job_url or f"{listing.company_name}:{listing.job_id}").strip().lower()
+		if not key or key in seen:
+			continue
+		seen.add(key)
+		unique.append(listing)
+	return unique
 
 
 def _make_run_id(listing: JobListing) -> str:

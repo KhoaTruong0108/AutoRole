@@ -6,6 +6,7 @@ from typing import Any
 
 from autorole.config import AppConfig
 from autorole.context import JobApplicationContext
+from autorole.integrations.discovery import build_discovery_providers
 from autorole.stages.exploring import ExploringStage
 
 try:
@@ -77,7 +78,11 @@ class _DryRunPipeline:
 
 async def build_pipeline(config: AppConfig) -> tuple[_DryRunPipeline, ExploringStage]:
 	_ = config
-	exploring = ExploringStage(config, scrapers={})
+	exploring = ExploringStage(
+		config,
+		scrapers={},
+		discovery_providers=build_discovery_providers(config.search.platforms, llm_client=None),
+	)
 	pipeline = _DryRunPipeline(
 		stages=[
 			StubStage("scoring"),
