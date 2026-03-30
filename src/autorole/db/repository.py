@@ -203,3 +203,61 @@ class JobRepository:
 		stage = str(row[0])
 		context = orjson.loads(row[1])
 		return stage, context
+
+	async def claim_listing_identity(
+		self,
+		canonical_key: str,
+		listing: JobListing,
+		run_id: str | None = None,
+	) -> bool:
+		cursor = await self._db.execute(
+			"""
+			INSERT INTO listing_identities (
+				canonical_key, run_id, job_url, apply_url, company_name, job_id,
+				job_title, platform, crawled_at, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(canonical_key) DO NOTHING
+			""",
+			(
+				canonical_key,
+				run_id,
+				listing.job_url,
+				listing.apply_url,
+				listing.company_name,
+				listing.job_id,
+				listing.job_title,
+				listing.platform,
+				listing.crawled_at.isoformat(),
+				datetime.now(timezone.utc).isoformat(),
+				datetime.now(timezone.utc).isoformat(),
+			),
+		)
+		await self._db.commit()
+		return cursor.rowcount > 0
+
+	async def get_listing_identity(self, canonical_key: str) -> dict[str, Any] | None:
+		async with self._db.execute(
+			"""
+			SELECT canonical_key, run_id, job_url, apply_url, company_name, job_id,
+			       job_title, platform, crawled_at, created_at, updated_at
+			FROM listing_identities
+			WHERE canonical_key = ?
+			""",
+			(canonical_key,),
+		) as cursor:
+			row = await cursor.fetchone()
+		if row is None:
+			return None
+		return {
+			"canonical_key": row[0],
+			"run_id": row[1],
+			"job_url": row[2],
+			"apply_url": row[3],
+			"company_name": row[4],
+			"job_id": row[5],
+			"job_title": row[6],
+			"platform": row[7],
+			"crawled_at": row[8],
+			"created_at": row[9],
+			"updated_at": row[10],
+		}

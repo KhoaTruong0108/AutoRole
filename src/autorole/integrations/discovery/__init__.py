@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from autorole.integrations.discovery.jobspy import JobSpyDiscoveryProvider
+from autorole.integrations.discovery.normalization import canonical_listing_key, generate_run_id, normalize_listing
 from autorole.integrations.discovery.smartextract import SmartExtractDiscoveryProvider
 from autorole.integrations.discovery.workday import WorkdayDiscoveryProvider
 from autorole.integrations.scrapers.base import JobDiscoveryProvider
@@ -34,5 +35,8 @@ __all__ = [
 	"JobSpyDiscoveryProvider",
 	"SmartExtractDiscoveryProvider",
 	"WorkdayDiscoveryProvider",
+	"canonical_listing_key",
 	"build_discovery_providers",
+	"generate_run_id",
+	"normalize_listing",
 ]

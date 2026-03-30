@@ -31,7 +31,7 @@ class ScoringWeights(BaseModel):
 class TailoringConfig(BaseModel):
 	max_attempts: int = 2
 	degree_4_enabled: bool = False
-	pass_threshold: float = 0.65
+	pass_threshold: float = 0.85
 	degree_1_threshold: float = 0.70
 	degree_2_threshold: float = 0.55
 	degree_3_threshold: float = 0.40

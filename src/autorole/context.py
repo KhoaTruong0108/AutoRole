@@ -34,6 +34,13 @@ class JobListing(BaseModel):
 	crawled_at: datetime
 
 
+class ExplorationSeed(BaseModel):
+	listing: JobListing
+	source_name: str
+	discovered_at: datetime
+	source_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class ScoreReport(BaseModel):
 	resume_id: str
 	jd_html: str

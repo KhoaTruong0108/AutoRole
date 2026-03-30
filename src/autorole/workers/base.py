@@ -177,7 +177,7 @@ class StageWorker(ABC):
                 if self._on_block is not None:
                     self._on_block(msg.run_id, reason)
                 return
-            loop_msg = self._build_loop_message(msg, decision)
+            loop_msg = self._build_loop_message(msg, decision, result.output)
             await queue.enqueue(self._loop_queue(msg), loop_msg)
             await queue.ack(self._config.input_queue, msg.message_id)
             return
@@ -196,8 +196,13 @@ class StageWorker(ABC):
         next_reply_queue = _NEXT_REPLY_QUEUE.get(msg.reply_queue, msg.reply_queue)
         metadata = dict(msg.metadata)
         metadata.pop("__loop_attempt", None)
+        next_run_id = msg.run_id
+        if isinstance(output, dict):
+            output_run_id = output.get("run_id")
+            if isinstance(output_run_id, str) and output_run_id.strip():
+                next_run_id = output_run_id
         return Message(
-            run_id=msg.run_id,
+            run_id=next_run_id,
             stage=_QUEUE_TO_STAGE.get(msg.reply_queue, self.name),
             payload=output,
             reply_queue=next_reply_queue,
@@ -206,14 +211,14 @@ class StageWorker(ABC):
             metadata=metadata,
         )
 
-    def _build_loop_message(self, msg: Message, decision: RoutingDecision) -> Message:
+    def _build_loop_message(self, msg: Message, decision: RoutingDecision, output: dict[str, Any]) -> Message:
         current_loop_attempt = self._current_loop_attempt(msg)
         metadata = dict(decision.metadata)
         metadata["__loop_attempt"] = current_loop_attempt + 1
         return Message(
             run_id=msg.run_id,
             stage=msg.stage,
-            payload=msg.payload,
+            payload=output,
             reply_queue=msg.reply_queue,
             dead_letter_queue=msg.dead_letter_queue,
             attempt=msg.attempt + 1,

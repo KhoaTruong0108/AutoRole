@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from autorole.config import AppConfig
-from autorole.context import JobApplicationContext
+from autorole.context import ExplorationSeed
 from autorole.context import JobListing
 from autorole.queue import DEAD_LETTER_Q, EXPLORING_Q, InMemoryQueueBackend, SCORING_Q
 from autorole.stages.exploring import ExploringStage
@@ -49,7 +49,7 @@ def _listing(company: str, job_id: str, platform: str) -> JobListing:
 
 @pytest.mark.asyncio
 async def test_exploring_worker_success(repo, tmp_path):
-    output_fixture = load_fixture("qualification_input.json")
+    output_fixture = load_fixture("exploration_seed_input.json")
     queue = InMemoryQueueBackend()
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
@@ -73,25 +73,22 @@ async def test_exploring_worker_success(repo, tmp_path):
 
     out = await queue.pull(SCORING_Q)
     assert out is not None
-    out_ctx = JobApplicationContext.model_validate(out.payload)
-    assert out_ctx.listing is not None
+    out_seed = ExplorationSeed.model_validate(out.payload)
+    assert out_seed.listing is not None
     assert await queue.pull(DEAD_LETTER_Q) is None
 
-    async with repo._db.execute(
-        "SELECT COUNT(*) FROM job_listings WHERE run_id = ?",
-        (output_fixture["run_id"],),
-    ) as cur:
+    async with repo._db.execute("SELECT COUNT(*) FROM job_listings") as cur:
         row = await cur.fetchone()
-    assert row is not None and row[0] == 1
+    assert row is not None and row[0] == 0
 
 
 @pytest.mark.asyncio
 async def test_exploring_worker_fanout(repo, tmp_path):
-    first = load_fixture("qualification_input.json")
-    second = load_fixture("qualification_input.json")
-    second["run_id"] = "test-run-002"
+    first = load_fixture("exploration_seed_input.json")
+    second = load_fixture("exploration_seed_input.json")
     second["listing"]["job_id"] = "9999999"
     second["listing"]["job_url"] = "https://example.com/jobs/9999999"
+    second["listing"]["apply_url"] = "https://example.com/jobs/9999999"
 
     queue = InMemoryQueueBackend()
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
@@ -198,7 +195,7 @@ async def test_exploring_worker_fanout_is_per_source(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_skips_cross_source_duplicates_and_continues(repo, tmp_path):
+async def test_exploring_worker_keeps_cross_source_duplicates_for_qualification(repo, tmp_path):
     duplicate = _listing("Acme", "1", "source_a")
     stage = ExploringStage(
         AppConfig(),
@@ -230,7 +227,6 @@ async def test_exploring_worker_skips_cross_source_duplicates_and_continues(repo
     first = await queue.pull(SCORING_Q)
     second = await queue.pull(SCORING_Q)
     third = await queue.pull(SCORING_Q)
-    assert first is not None and second is not None
-    assert third is None
-    run_ids = {first.run_id, second.run_id}
-    assert run_ids == {"acme_1", "beta_2"}
+    fourth = await queue.pull(SCORING_Q)
+    assert first is not None and second is not None and third is not None
+    assert fourth is None

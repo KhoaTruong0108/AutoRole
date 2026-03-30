@@ -4,10 +4,10 @@ import json
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
-from autorole.context import JobApplicationContext
+from autorole.context import ExplorationSeed, JobApplicationContext
 from autorole.queue import PACKAGING_Q, Message, QueueBackend
-from autorole.stages.exploring import _make_run_id
 from autorole.workers.base import StageWorker
 
 
@@ -43,18 +43,17 @@ class ExploringWorker(StageWorker):
                 self._on_block(msg.run_id, str(getattr(result, "error", "exploring_failed")))
             return
 
-        contexts = list(getattr(result, "output", []))
-        selected = contexts[: max(1, int(msg.payload.get("max_listings", len(contexts)) or 1))]
+        seeds = list(getattr(result, "output", []))
+        selected = seeds[: max(1, int(msg.payload.get("max_listings", len(seeds)) or 1))]
         if self._on_fanout is not None:
             self._on_fanout(len(selected))
-        for ctx in selected:
-            context = JobApplicationContext.model_validate(ctx)
-            await self._emit_context(queue, msg, context)
+        for item in selected:
+            seed = ExplorationSeed.model_validate(item)
+            await self._emit_seed(queue, msg, seed)
 
         await queue.ack(self._config.input_queue, msg.message_id)
 
     async def _process_incremental(self, queue: QueueBackend, msg: Message) -> None:
-        seen_keys: set[str] = set()
         total_emitted = 0
         source_names = list(self._stage.source_names(msg))
         per_source_limit = max(1, int(msg.payload.get("max_listings", 1) or 1))
@@ -63,15 +62,12 @@ class ExploringWorker(StageWorker):
             async for source_name, listings in self._stage.iter_source_listings(msg):
                 emitted_for_source = 0
                 for listing in listings:
-                    key = self._listing_key(listing)
-                    if not key or key in seen_keys:
-                        continue
-                    context = JobApplicationContext(run_id=_make_run_id(listing), listing=listing)
-                    if await self._repo.get_checkpoint(context.run_id) is not None:
-                        seen_keys.add(key)
-                        continue
-                    await self._emit_context(queue, msg, context)
-                    seen_keys.add(key)
+                    seed = ExplorationSeed(
+                        listing=listing,
+                        source_name=source_name,
+                        discovered_at=datetime.now(timezone.utc),
+                    )
+                    await self._emit_seed(queue, msg, seed)
                     emitted_for_source += 1
                     total_emitted += 1
                     if emitted_for_source >= per_source_limit:
@@ -98,28 +94,24 @@ class ExploringWorker(StageWorker):
 
         await queue.ack(self._config.input_queue, msg.message_id)
 
-    async def _emit_context(self, queue: QueueBackend, msg: Message, context: JobApplicationContext) -> None:
-        if context.listing is not None:
-            await self._repo.upsert_listing(context.listing, context.run_id)
-        await self._repo.upsert_checkpoint(context.run_id, self.name, context.model_dump(mode="json"))
-        self._maybe_export_dryrun_fixture(context, msg)
-
+    async def _emit_seed(self, queue: QueueBackend, msg: Message, seed: ExplorationSeed) -> None:
+        transport_run_id = self._seed_transport_id(seed)
         child = Message(
-            run_id=context.run_id,
+            run_id=transport_run_id,
             stage="qualification",
-            payload=context.model_dump(mode="json"),
+            payload=seed.model_dump(mode="json"),
             reply_queue=PACKAGING_Q,
             dead_letter_queue=msg.dead_letter_queue,
             metadata=dict(msg.metadata),
         )
         await queue.enqueue(self._config.reply_queue, child)
 
-        run_dir = self._artifacts_root / context.run_id
+        run_dir = self._artifacts_root / transport_run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         index_path = run_dir / "stage_outputs.md"
         if not index_path.exists():
-            index_path.write_text(f"# Stage Outputs for {context.run_id}\\n\\n", encoding="utf-8")
-        listing_json = context.listing.model_dump(mode="json") if context.listing is not None else {}
+            index_path.write_text(f"# Stage Outputs for {transport_run_id}\\n\\n", encoding="utf-8")
+        listing_json = seed.listing.model_dump(mode="json")
         listing_path = run_dir / self.name / "listing.json"
         listing_path.parent.mkdir(parents=True, exist_ok=True)
         listing_path.write_text(json.dumps(listing_json, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
@@ -127,12 +119,9 @@ class ExploringWorker(StageWorker):
             handle.write(f"## Seeded at {datetime.now(timezone.utc).isoformat()}\\n")
             handle.write(f"- {self.name}: {self.name}/listing.json\\n")
 
-    def _listing_key(self, listing: Any) -> str:
-        job_url = getattr(listing, "job_url", "") or ""
-        apply_url = getattr(listing, "apply_url", "") or ""
-        company_name = getattr(listing, "company_name", "") or ""
-        job_id = getattr(listing, "job_id", "") or ""
-        return (apply_url or job_url or f"{company_name}:{job_id}").strip().lower()
+    def _seed_transport_id(self, seed: ExplorationSeed) -> str:
+        source = seed.source_name.lower().replace(" ", "_") or "source"
+        return f"seed_{source}_{uuid4().hex[:12]}"
 
     async def on_success(self, ctx: JobApplicationContext, attempt: int) -> None:
         _ = (ctx, attempt)

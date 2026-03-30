@@ -13,6 +13,7 @@ from autorole.context import JobApplicationContext, JobListing
 from autorole.db.repository import JobRepository
 from autorole.gates.best_fit import BestFitGate
 from autorole.integrations.credentials import CredentialStore
+from autorole.integrations.discovery.normalization import canonical_listing_key, generate_run_id, normalize_listing
 from autorole.pipeline import inject_loop_metadata_from_gate_reason
 from autorole.stages.concluding import ConcludingStage
 from autorole.stages.exploring import ExploringStage
@@ -224,6 +225,8 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 		db_path=str(base_dir / "pipeline.db"),
 		master_resume=str(master_resume),
 	)
+	config.tailoring.pass_threshold = 0.85
+	config.tailoring.degree_1_threshold = 0.70
 	(base_dir / "user_profile.json").write_text("{}", encoding="utf-8")
 
 	async with aiosqlite.connect(":memory:") as db:
@@ -260,7 +263,12 @@ async def test_full_pipeline_start_to_end(tmp_path: Path, monkeypatch: Any) -> N
 		assert explore_result.success
 		assert len(explore_result.output) == 1
 
-		ctx = explore_result.output[0]
+		exploration_seed = explore_result.output[0]
+		listing = normalize_listing(exploration_seed.listing)
+		run_id = generate_run_id(listing)
+		claimed = await repo.claim_listing_identity(canonical_listing_key(listing), listing, run_id=run_id)
+		assert claimed is True
+		ctx = JobApplicationContext(run_id=run_id, listing=listing)
 		await repo.upsert_listing(ctx.listing, ctx.run_id)
 
 		async with db.execute("SELECT COUNT(*) FROM job_listings WHERE run_id = ?", (ctx.run_id,)) as cur:

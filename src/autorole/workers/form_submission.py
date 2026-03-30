@@ -20,8 +20,8 @@ class FormSubmissionWorker(StageWorker):
         _ = msg
         return FORM_INTEL_Q
 
-    def _build_loop_message(self, msg: Message, decision: RoutingDecision) -> Message:
-        loop_message = super()._build_loop_message(msg, decision)
+    def _build_loop_message(self, msg: Message, decision: RoutingDecision, output: dict[str, object]) -> Message:
+        loop_message = super()._build_loop_message(msg, decision, output)
         loop_message.reply_queue = msg.reply_queue
         return loop_message
 

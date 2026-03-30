@@ -18,6 +18,22 @@ CREATE TABLE IF NOT EXISTS job_listings (
 CREATE INDEX IF NOT EXISTS idx_listings_company ON job_listings(company_name);
 CREATE INDEX IF NOT EXISTS idx_listings_platform ON job_listings(platform);
 
+CREATE TABLE IF NOT EXISTS listing_identities (
+	canonical_key TEXT PRIMARY KEY,
+	run_id        TEXT,
+	job_url       TEXT NOT NULL,
+	apply_url     TEXT,
+	company_name  TEXT NOT NULL,
+	job_id        TEXT NOT NULL,
+	job_title     TEXT NOT NULL,
+	platform      TEXT NOT NULL,
+	crawled_at    TEXT NOT NULL,
+	created_at    TEXT NOT NULL,
+	updated_at    TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_listing_identities_run_id ON listing_identities(run_id);
+
 CREATE TABLE IF NOT EXISTS score_reports (
 	id              INTEGER PRIMARY KEY AUTOINCREMENT,
 	run_id          TEXT    NOT NULL REFERENCES job_listings(run_id),

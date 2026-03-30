@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from autorole.config import AppConfig
 from autorole.config import SearchFilter
+from autorole.context import ExplorationSeed
 from autorole.context import JobListing
 from autorole.integrations.scrapers import register_scraper
 from autorole.integrations.scrapers.base import ATSScraper, JobDiscoveryProvider
@@ -135,7 +136,7 @@ def _listing(company: str, job_id: str) -> JobListing:
 	)
 
 
-async def test_exploring_returns_one_context_per_listing() -> None:
+async def test_exploring_returns_one_seed_per_listing() -> None:
 	listings = [_listing("Acme Corp", "1"), _listing("Beta Inc", "2"), _listing("Gamma", "3")]
 	stage = ExploringStage(AppConfig(), scrapers={"mock": MockScraper(listings)})
 	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["mock"]}})
@@ -144,9 +145,10 @@ async def test_exploring_returns_one_context_per_listing() -> None:
 
 	assert result.success
 	assert len(result.output) == 3
+	assert all(ExplorationSeed.model_validate(seed).listing.job_id for seed in result.output)
 
 
-async def test_exploring_sets_correct_run_id() -> None:
+async def test_exploring_emits_source_name_on_seed() -> None:
 	listing = _listing("Acme Corp", "456")
 	stage = ExploringStage(AppConfig(), scrapers={"mock": MockScraper([listing])})
 	msg = Message(run_id="seed", payload={"search_config": {"platforms": ["mock"]}})
@@ -154,7 +156,8 @@ async def test_exploring_sets_correct_run_id() -> None:
 	result = await stage.execute(msg)
 
 	assert result.success
-	assert result.output[0].run_id == "acme_corp_456"
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.source_name == "mock"
 
 
 async def test_exploring_continues_on_one_platform_failure() -> None:
@@ -176,7 +179,7 @@ async def test_exploring_continues_on_one_platform_failure() -> None:
 
 	assert result.success
 	assert len(result.output) == 1
-	assert result.output[0].listing.company_name == "Good Co"
+	assert ExplorationSeed.model_validate(result.output[0]).listing.company_name == "Good Co"
 
 
 async def test_exploring_fails_when_no_listings() -> None:
@@ -189,7 +192,7 @@ async def test_exploring_fails_when_no_listings() -> None:
 	assert result.error_type == "NoListingsFound"
 
 
-async def test_manual_url_exploring_returns_single_context() -> None:
+async def test_manual_url_exploring_returns_single_seed() -> None:
 	listing = _listing("Acme Corp", "123")
 	stage = ManualUrlExploringStage(AppConfig(), extractor=MockExtractor(listing=listing))
 	msg = Message(run_id="seed", payload={"job_url": "https://example.com/jobs/123"})
@@ -198,7 +201,8 @@ async def test_manual_url_exploring_returns_single_context() -> None:
 
 	assert result.success
 	assert len(result.output) == 1
-	assert result.output[0].run_id == "acme_corp_123"
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.source_metadata["manual_url"] is True
 
 
 async def test_manual_url_exploring_requires_job_url() -> None:
@@ -233,10 +237,9 @@ async def test_exploring_uses_ats_registry_when_platform_scraper_missing() -> No
 
 	assert result.success
 	assert len(result.output) == 1
-	ctx = result.output[0]
-	assert ctx.run_id == "robo_corp_1001"
-	assert ctx.listing.platform == "smartrecruiters"
-	assert ctx.listing.apply_url == "https://www.smartrecruiters.com/company/jobs/1001/apply"
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.listing.platform == "smartrecruiters"
+	assert seed.listing.apply_url == "https://www.smartrecruiters.com/company/jobs/1001/apply"
 
 
 async def test_exploring_resolves_apply_url_when_metadata_missing_it() -> None:
@@ -247,9 +250,9 @@ async def test_exploring_resolves_apply_url_when_metadata_missing_it() -> None:
 	result = await stage.execute(msg)
 
 	assert result.success
-	ctx = result.output[0]
-	assert ctx.listing.job_url == "https://jobs.lever.co/acme/2002"
-	assert ctx.listing.apply_url == "https://jobs.lever.co/acme/2002/apply"
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.listing.job_url == "https://jobs.lever.co/acme/2002"
+	assert seed.listing.apply_url == "https://jobs.lever.co/acme/2002/apply"
 
 
 async def test_exploring_uses_discovery_provider_when_registered() -> None:
@@ -273,12 +276,11 @@ async def test_exploring_uses_discovery_provider_when_registered() -> None:
 
 	assert result.success
 	assert len(result.output) == 1
-	ctx = result.output[0]
-	assert ctx.run_id == "mastercard_Platform-Engineer_JR123"
-	assert ctx.listing.platform == "workday"
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.listing.platform == "workday"
 
 
-async def test_exploring_dedupes_provider_and_scraper_results() -> None:
+async def test_exploring_keeps_cross_source_duplicates_for_downstream_dedupe() -> None:
 	listing = _listing("Acme Corp", "456")
 	listing = listing.model_copy(update={"apply_url": listing.job_url})
 	stage = ExploringStage(
@@ -291,5 +293,5 @@ async def test_exploring_dedupes_provider_and_scraper_results() -> None:
 	result = await stage.execute(msg)
 
 	assert result.success
-	assert len(result.output) == 1
+	assert len(result.output) == 2
 

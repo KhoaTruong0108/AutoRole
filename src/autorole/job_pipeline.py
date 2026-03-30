@@ -461,6 +461,7 @@ class JobApplicationPipeline:
                 tailoring_stage=TailoringStage(cfg, llm_client),
                 config=wc(SCORING_Q, PACKAGING_Q),
                 max_attempts=cfg.tailoring.max_attempts,
+                on_duplicate=tracker.on_success,
                 on_pass=tracker.on_success if self._rc.mode == "observe" else None,
                 on_block=tracker.on_failure,
                 **shared,

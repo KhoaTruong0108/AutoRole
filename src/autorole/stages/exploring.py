@@ -7,7 +7,8 @@ from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 from autorole.config import AppConfig, SearchFilter
-from autorole.context import JobApplicationContext, JobListing
+from autorole.context import ExplorationSeed, JobListing
+from autorole.integrations.discovery.normalization import normalize_listing
 from autorole.integrations.scrapers import get_scraper
 from autorole.integrations.scrapers.base import JobBoardScraper, JobDiscoveryProvider, JobPostingExtractor
 from autorole.integrations.scrapers.detection import detect_ats
@@ -90,23 +91,28 @@ class ExploringStage(Stage):
 		search = SearchFilter.model_validate(payload.get("search_config", {}))
 		for platform in search.platforms:
 			listings = await self._search_platform(platform, search)
-			yield platform, _dedupe_listings(listings)
+			normalized = [normalize_listing(listing) for listing in listings]
+			yield platform, _dedupe_listings(normalized)
 
 	async def execute(self, message: Message) -> StageResult:
-		listings: list[JobListing] = []
+		seeds: list[ExplorationSeed] = []
 		async for _source_name, source_listings in self.iter_source_listings(message):
-			listings.extend(source_listings)
+			for listing in source_listings:
+				seeds.append(
+					ExplorationSeed(
+						listing=listing,
+						source_name=_source_name,
+						discovered_at=datetime.now(timezone.utc),
+					)
+				)
 
-		listings = _dedupe_listings(listings)
-
-		if not listings:
+		if not seeds:
 			return StageResult.fail(
 				error="No job listings found across all configured platforms",
 				error_type="NoListingsFound",
 			)
 
-		contexts = [JobApplicationContext(run_id=_make_run_id(listing), listing=listing) for listing in listings]
-		return StageResult.ok(output=contexts)
+		return StageResult.ok(output=seeds)
 
 	async def _search_platform(self, platform: str, search: SearchFilter) -> list[JobListing]:
 		scraper = self._scrapers.get(platform)
@@ -166,13 +172,19 @@ class ManualUrlExploringStage(Stage):
 				listing.platform,
 			)
 			listing = listing.model_copy(update={"apply_url": resolved_apply_url})
+			listing = normalize_listing(listing)
 		except ValueError as exc:
 			return StageResult.fail(error=str(exc), error_type="InvalidJobUrl")
 		except Exception as exc:
 			return StageResult.fail(error=f"Job URL extraction failed: {exc}", error_type="ExtractionError")
 
-		ctx = JobApplicationContext(run_id=_make_run_id(listing), listing=listing)
-		return StageResult.ok(output=[ctx])
+		seed = ExplorationSeed(
+			listing=listing,
+			source_name=self._platform_hint or listing.platform or "manual_url",
+			discovered_at=datetime.now(timezone.utc),
+			source_metadata={"manual_url": True},
+		)
+		return StageResult.ok(output=[seed])
 
 
 def _dedupe_listings(listings: list[JobListing]) -> list[JobListing]:
@@ -185,13 +197,6 @@ def _dedupe_listings(listings: list[JobListing]) -> list[JobListing]:
 		seen.add(key)
 		unique.append(listing)
 	return unique
-
-
-def _make_run_id(listing: JobListing) -> str:
-	company = listing.company_name.lower().replace(" ", "_")
-	return f"{company}_{listing.job_id}"
-
-
 async def _search_via_ats_registry(platform: str, search: SearchFilter, page: Any | None) -> list[JobListing]:
 	seed_url = _platform_seed_url(platform)
 	ats_scraper = get_scraper(seed_url, page=page)
@@ -209,7 +214,8 @@ async def _search_via_ats_registry(platform: str, search: SearchFilter, page: An
 			listing_platform,
 		)
 		listings.append(
-			JobListing(
+			normalize_listing(
+				JobListing(
 				job_url=metadata.job_url,
 				apply_url=resolved_apply_url,
 				company_name=metadata.company_name,
@@ -217,6 +223,7 @@ async def _search_via_ats_registry(platform: str, search: SearchFilter, page: An
 				job_title=metadata.job_title,
 				platform=listing_platform,
 				crawled_at=datetime.now(timezone.utc),
+				)
 			)
 		)
 	return listings
