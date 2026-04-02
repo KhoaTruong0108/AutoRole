@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from pydantic import BaseModel
+
 from autorole.context import JobApplicationContext
 from autorole.db.repository import JobRepository
 from autorole.queue import (
@@ -19,6 +21,7 @@ from autorole.queue import (
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
+    TAILORING_Q,
     SESSION_Q,
     Message,
     QueueBackend,
@@ -26,7 +29,8 @@ from autorole.queue import (
 
 _QUEUE_TO_STAGE: dict[str, str] = {
     EXPLORING_Q: "exploring",
-    SCORING_Q: "qualification",
+    SCORING_Q: "scoring",
+    TAILORING_Q: "tailoring",
     PACKAGING_Q: "packaging",
     SESSION_Q: "session",
     FORM_INTEL_Q: "form_intelligence",
@@ -37,7 +41,8 @@ _QUEUE_TO_STAGE: dict[str, str] = {
 
 _NEXT_REPLY_QUEUE: dict[str, str] = {
     EXPLORING_Q: SCORING_Q,
-    SCORING_Q: PACKAGING_Q,
+    SCORING_Q: TAILORING_Q,
+    TAILORING_Q: PACKAGING_Q,
     PACKAGING_Q: SESSION_Q,
     SESSION_Q: FORM_INTEL_Q,
     FORM_INTEL_Q: LLM_FIELD_COMPLETER_Q,
@@ -49,7 +54,8 @@ _NEXT_REPLY_QUEUE: dict[str, str] = {
 
 _DRYRUN_FIXTURE_BY_STAGE: dict[str, str] = {
     "exploring": "qualification_input.json",
-    "qualification": "packaging_input.json",
+    "scoring": "scoring_input.json",
+    "tailoring": "packaging_input.json",
     "packaging": "session_input.json",
     "session": "form_intelligence_input.json",
     "form_intelligence": "llm_field_completer_input.json",
@@ -113,7 +119,45 @@ class StageWorker(ABC):
             if msg is None:
                 await asyncio.sleep(self._config.poll_interval_seconds)
                 continue
-            await self.process(queue, msg)
+            print(
+                f"[processing] stage={self.name} queue={self._config.input_queue} "
+                f"message_id={msg.message_id} run_id={msg.run_id} attempt={msg.attempt}"
+            )
+            self._logger.info(
+                "processing message stage=%s queue=%s message_id=%s run_id=%s attempt=%s",
+                self.name,
+                self._config.input_queue,
+                msg.message_id,
+                msg.run_id,
+                msg.attempt,
+            )
+            try:
+                await self.process(queue, msg)
+            except Exception as exc:
+                print(
+                    f"[failed] stage={self.name} queue={self._config.input_queue} "
+                    f"message_id={msg.message_id} run_id={msg.run_id} because={exc}"
+                )
+                self._logger.exception(
+                    "failed to process message stage=%s queue=%s message_id=%s run_id=%s because=%s",
+                    self.name,
+                    self._config.input_queue,
+                    msg.message_id,
+                    msg.run_id,
+                    exc,
+                )
+                raise
+            print(
+                f"[finished] stage={self.name} queue={self._config.input_queue} "
+                f"message_id={msg.message_id} run_id={msg.run_id}"
+            )
+            self._logger.info(
+                "finished processing message stage=%s queue=%s message_id=%s run_id=%s",
+                self.name,
+                self._config.input_queue,
+                msg.message_id,
+                msg.run_id,
+            )
 
     async def process(self, queue: QueueBackend, msg: Message) -> None:
         result = await self._execute_inner(msg)
@@ -124,6 +168,13 @@ class StageWorker(ABC):
                 reason = f"unhandled exception after {current_exec_attempt} attempt(s)"
                 await queue.enqueue(msg.dead_letter_queue, msg)
                 await queue.ack(self._config.input_queue, msg.message_id)
+                self._logger.error(
+                    "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+                    self.name,
+                    msg.run_id,
+                    msg.message_id,
+                    reason,
+                )
                 self._logger.error("blocked stage=%s run_id=%s reason=%s", self.name, msg.run_id, reason)
                 if self._on_block is not None:
                     self._on_block(msg.run_id, reason)
@@ -149,6 +200,13 @@ class StageWorker(ABC):
             if not getattr(result, "success", False):
                 await queue.enqueue(msg.dead_letter_queue, msg)
                 await queue.ack(self._config.input_queue, msg.message_id)
+                self._logger.warning(
+                    "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+                    self.name,
+                    msg.run_id,
+                    msg.message_id,
+                    getattr(result, "error", "stage_failed"),
+                )
                 if self._on_block is not None:
                     self._on_block(msg.run_id, str(getattr(result, "error", "stage_failed")))
                 return
@@ -173,6 +231,13 @@ class StageWorker(ABC):
                 )
                 await queue.enqueue(msg.dead_letter_queue, msg)
                 await queue.ack(self._config.input_queue, msg.message_id)
+                self._logger.warning(
+                    "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+                    self.name,
+                    msg.run_id,
+                    msg.message_id,
+                    reason,
+                )
                 self._logger.warning("blocked stage=%s run_id=%s reason=%s", self.name, msg.run_id, reason)
                 if self._on_block is not None:
                     self._on_block(msg.run_id, reason)
@@ -184,6 +249,13 @@ class StageWorker(ABC):
 
         await queue.enqueue(msg.dead_letter_queue, msg)
         await queue.ack(self._config.input_queue, msg.message_id)
+        self._logger.warning(
+            "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+            self.name,
+            msg.run_id,
+            msg.message_id,
+            decision.reason,
+        )
         self._logger.warning("blocked stage=%s run_id=%s reason=%s", self.name, msg.run_id, decision.reason)
         if self._on_block is not None:
             self._on_block(msg.run_id, decision.reason)
@@ -197,14 +269,15 @@ class StageWorker(ABC):
         metadata = dict(msg.metadata)
         metadata.pop("__loop_attempt", None)
         next_run_id = msg.run_id
-        if isinstance(output, dict):
-            output_run_id = output.get("run_id")
+        payload = self._queue_payload(output)
+        if isinstance(payload, dict):
+            output_run_id = payload.get("run_id")
             if isinstance(output_run_id, str) and output_run_id.strip():
                 next_run_id = output_run_id
         return Message(
             run_id=next_run_id,
             stage=_QUEUE_TO_STAGE.get(msg.reply_queue, self.name),
-            payload=output,
+            payload=payload,
             reply_queue=next_reply_queue,
             dead_letter_queue=msg.dead_letter_queue,
             attempt=1,
@@ -218,12 +291,20 @@ class StageWorker(ABC):
         return Message(
             run_id=msg.run_id,
             stage=msg.stage,
-            payload=output,
+            payload=self._queue_payload(output),
             reply_queue=msg.reply_queue,
             dead_letter_queue=msg.dead_letter_queue,
             attempt=msg.attempt + 1,
             metadata=metadata,
         )
+
+    def _queue_payload(self, output: Any) -> dict[str, Any]:
+        if isinstance(output, BaseModel):
+            return output.model_dump(mode="json")
+        if isinstance(output, dict):
+            return output
+        validated = JobApplicationContext.model_validate(output)
+        return validated.model_dump(mode="json")
 
     def _current_loop_attempt(self, msg: Message) -> int:
         value = msg.metadata.get("__loop_attempt") if isinstance(msg.metadata, dict) else None

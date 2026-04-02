@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 import logging
 from datetime import datetime, timezone
+import json
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
@@ -185,6 +187,134 @@ class ManualUrlExploringStage(Stage):
 			source_metadata={"manual_url": True},
 		)
 		return StageResult.ok(output=[seed])
+
+
+class UrlListFileExploringStage(Stage):
+	"""Exploring mode that reads job URLs from a JSON file and emits exploration seeds."""
+
+	name = "exploring"
+	concurrency = 1
+
+	def __init__(
+		self,
+		config: AppConfig,
+		extractor: JobPostingExtractor,
+		platform_hint: str | None = None,
+	) -> None:
+		self._config = config
+		self._extractor = extractor
+		self._platform_hint = platform_hint
+		self._log = logging.getLogger(__name__)
+
+	async def execute(self, message: Message) -> StageResult:
+		_ = self._config
+		payload = message.payload if isinstance(message.payload, dict) else {}
+		job_urls_file = payload.get("job_urls_file")
+		if not isinstance(job_urls_file, str) or not job_urls_file.strip():
+			return StageResult.fail(
+				error="UrlListFileExploringStage requires payload.job_urls_file",
+				error_type="MissingJobUrlsFile",
+			)
+
+		try:
+			entries = _load_job_url_entries(Path(job_urls_file).expanduser())
+		except FileNotFoundError:
+			return StageResult.fail(
+				error=f"Job URLs file not found: {job_urls_file}",
+				error_type="JobUrlsFileNotFound",
+			)
+		except ValueError as exc:
+			return StageResult.fail(error=str(exc), error_type="InvalidJobUrlsFile")
+
+		if not entries:
+			return StageResult.fail(
+				error=f"No job URLs found in file: {job_urls_file}",
+				error_type="NoJobUrlsFound",
+			)
+
+		seeds: list[ExplorationSeed] = []
+		for index, entry in enumerate(entries):
+			try:
+				listing = await self._extractor.extract(entry["job_url"], platform_hint=entry["platform_hint"])
+				resolved_apply_url = _resolve_apply_url(
+					listing.job_url,
+					listing.apply_url,
+					listing.platform,
+				)
+				listing = listing.model_copy(update={"apply_url": resolved_apply_url})
+				listing = normalize_listing(listing)
+			except ValueError as exc:
+				self._log.warning("job_url_file_entry_invalid file=%s index=%s reason=%s", job_urls_file, index, exc)
+				continue
+			except Exception as exc:
+				self._log.warning("job_url_file_entry_extraction_failed file=%s index=%s reason=%s", job_urls_file, index, exc)
+				continue
+
+			seeds.append(
+				ExplorationSeed(
+					listing=listing,
+					source_name=entry["source_name"] or listing.platform or "url_list_file",
+					discovered_at=datetime.now(timezone.utc),
+					source_metadata={
+						"manual_url_list": True,
+						"job_urls_file": str(Path(job_urls_file).expanduser()),
+						"entry_index": index,
+					},
+				)
+			)
+
+		if not seeds:
+			return StageResult.fail(
+				error=f"No valid job URLs could be extracted from file: {job_urls_file}",
+				error_type="NoValidJobUrls",
+			)
+
+		return StageResult.ok(output=seeds)
+
+
+def _load_job_url_entries(file_path: Path) -> list[dict[str, str]]:
+	try:
+		data = json.loads(file_path.read_text(encoding="utf-8"))
+	except json.JSONDecodeError as exc:
+		raise ValueError(f"Invalid JSON in job URLs file: {file_path} ({exc})") from exc
+
+	raw_entries = data.get("job_urls") if isinstance(data, dict) else data
+	if not isinstance(raw_entries, list):
+		raise ValueError(
+			"Job URLs file must be either a JSON list or an object with a 'job_urls' list"
+		)
+
+	entries: list[dict[str, str]] = []
+	seen_urls: set[str] = set()
+	for index, raw_entry in enumerate(raw_entries):
+		job_url = ""
+		platform_hint = ""
+		source_name = ""
+		if isinstance(raw_entry, str):
+			job_url = raw_entry.strip()
+		elif isinstance(raw_entry, dict):
+			job_url = str(raw_entry.get("job_url", "")).strip()
+			platform_hint = str(raw_entry.get("platform_hint") or raw_entry.get("platform") or "").strip()
+			source_name = str(raw_entry.get("source_name", "")).strip()
+		else:
+			raise ValueError(f"Job URL entry at index {index} must be a string or object")
+
+		if not job_url:
+			raise ValueError(f"Job URL entry at index {index} is missing job_url")
+
+		normalized_url = job_url.lower()
+		if normalized_url in seen_urls:
+			continue
+		seen_urls.add(normalized_url)
+		entries.append(
+			{
+				"job_url": job_url,
+				"platform_hint": platform_hint,
+				"source_name": source_name or platform_hint or "url_list_file",
+			}
+		)
+
+	return entries
 
 
 def _dedupe_listings(listings: list[JobListing]) -> list[JobListing]:

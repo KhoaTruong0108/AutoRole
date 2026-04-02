@@ -7,6 +7,7 @@ from uuid import uuid4
 
 EXPLORING_Q = "exploring_q"
 SCORING_Q = "scoring_q"
+TAILORING_Q = "tailoring_q"
 PACKAGING_Q = "packaging_q"
 SESSION_Q = "session_q"
 FORM_INTEL_Q = "form_intel_q"

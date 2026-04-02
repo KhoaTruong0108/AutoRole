@@ -6,6 +6,7 @@ from typing import Any
 import aiosqlite
 import orjson
 
+from autorole.application_status import is_terminal_application_status
 from autorole.context import (
 	ApplicationResult,
 	JobListing,
@@ -14,6 +15,7 @@ from autorole.context import (
 	SessionResult,
 	TailoredResume,
 )
+from autorole.integrations.discovery.normalization import canonical_listing_key, normalize_listing
 
 
 class JobRepository:
@@ -127,6 +129,19 @@ class JobRepository:
 		packaged: PackagedResume | None,
 		applied: ApplicationResult | None,
 	) -> None:
+		terminal_status = applied.submission_status if applied else None
+		canonical_key = ""
+		if listing is not None and is_terminal_application_status(terminal_status):
+			normalized_listing = normalize_listing(listing)
+			canonical_key = canonical_listing_key(normalized_listing)
+			existing = await self.get_listing_identity(canonical_key)
+			if existing is not None:
+				existing_run_id = str(existing.get("run_id") or "").strip()
+				if existing_run_id and existing_run_id != run_id:
+					existing_status = await self.get_application_status(existing_run_id)
+					if is_terminal_application_status(existing_status):
+						return
+
 		await self._db.execute(
 			"""
 			INSERT INTO job_applications (
@@ -153,7 +168,19 @@ class JobRepository:
 				(applied.applied_at.isoformat() if applied else None),
 			),
 		)
+		if canonical_key and listing is not None:
+			await self.upsert_listing_identity(canonical_key, listing, run_id=run_id)
 		await self._db.commit()
+
+	async def get_application_status(self, run_id: str) -> str | None:
+		async with self._db.execute(
+			"SELECT submission_status FROM job_applications WHERE run_id = ?",
+			(run_id,),
+		) as cursor:
+			row = await cursor.fetchone()
+		if row is None:
+			return None
+		return str(row[0]) if row[0] is not None else None
 
 	async def get_pruneable_files(self, max_age_days: int) -> list[str]:
 		cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
@@ -234,6 +261,45 @@ class JobRepository:
 		)
 		await self._db.commit()
 		return cursor.rowcount > 0
+
+	async def upsert_listing_identity(
+		self,
+		canonical_key: str,
+		listing: JobListing,
+		run_id: str | None = None,
+	) -> None:
+		now = datetime.now(timezone.utc).isoformat()
+		await self._db.execute(
+			"""
+			INSERT INTO listing_identities (
+				canonical_key, run_id, job_url, apply_url, company_name, job_id,
+				job_title, platform, crawled_at, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(canonical_key) DO UPDATE SET
+				run_id = excluded.run_id,
+				job_url = excluded.job_url,
+				apply_url = excluded.apply_url,
+				company_name = excluded.company_name,
+				job_id = excluded.job_id,
+				job_title = excluded.job_title,
+				platform = excluded.platform,
+				crawled_at = excluded.crawled_at,
+				updated_at = excluded.updated_at
+			""",
+			(
+				canonical_key,
+				run_id,
+				listing.job_url,
+				listing.apply_url,
+				listing.company_name,
+				listing.job_id,
+				listing.job_title,
+				listing.platform,
+				listing.crawled_at.isoformat(),
+				now,
+				now,
+			),
+		)
 
 	async def get_listing_identity(self, canonical_key: str) -> dict[str, Any] | None:
 		async with self._db.execute(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 
 from autorole.config import AppConfig
 from autorole.config import SearchFilter
@@ -9,7 +10,7 @@ from autorole.context import JobListing
 from autorole.integrations.scrapers import register_scraper
 from autorole.integrations.scrapers.base import ATSScraper, JobDiscoveryProvider
 from autorole.integrations.scrapers.models import ApplicationForm, JobDescription, JobMetadata
-from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
+from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage, UrlListFileExploringStage
 
 try:
 	from pipeline.types import Message
@@ -226,6 +227,83 @@ async def test_manual_url_exploring_invalid_url_error() -> None:
 
 	assert not result.success
 	assert result.error_type == "InvalidJobUrl"
+
+
+async def test_url_list_file_exploring_returns_seed_per_unique_url(tmp_path) -> None:
+	listing = _listing("Acme Corp", "123")
+	job_urls_file = tmp_path / "job_urls.json"
+	job_urls_file.write_text(
+		json.dumps(
+			{
+				"job_urls": [
+					"https://example.com/jobs/123",
+					{"job_url": "https://example.com/jobs/123", "source_name": "manual-upload"},
+				]
+			}
+		),
+		encoding="utf-8",
+	)
+	stage = UrlListFileExploringStage(AppConfig(), extractor=MockExtractor(listing=listing))
+	msg = Message(run_id="seed", payload={"job_urls_file": str(job_urls_file)})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	assert len(result.output) == 1
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.source_metadata["manual_url_list"] is True
+	assert seed.source_metadata["job_urls_file"] == str(job_urls_file)
+
+
+async def test_url_list_file_exploring_accepts_json_list_entries(tmp_path) -> None:
+	listing = _listing("Acme Corp", "123")
+	job_urls_file = tmp_path / "job_urls.json"
+	job_urls_file.write_text(json.dumps(["https://example.com/jobs/123"]), encoding="utf-8")
+	stage = UrlListFileExploringStage(AppConfig(), extractor=MockExtractor(listing=listing))
+	msg = Message(run_id="seed", payload={"job_urls_file": str(job_urls_file)})
+
+	result = await stage.execute(msg)
+
+	assert result.success
+	seed = ExplorationSeed.model_validate(result.output[0])
+	assert seed.source_name == "url_list_file"
+
+
+async def test_url_list_file_exploring_requires_file_path() -> None:
+	stage = UrlListFileExploringStage(AppConfig(), extractor=MockExtractor(listing=_listing("A", "1")))
+	msg = Message(run_id="seed", payload={})
+
+	result = await stage.execute(msg)
+
+	assert not result.success
+	assert result.error_type == "MissingJobUrlsFile"
+
+
+async def test_url_list_file_exploring_rejects_invalid_json(tmp_path) -> None:
+	job_urls_file = tmp_path / "job_urls.json"
+	job_urls_file.write_text("{not-json}", encoding="utf-8")
+	stage = UrlListFileExploringStage(AppConfig(), extractor=MockExtractor(listing=_listing("A", "1")))
+	msg = Message(run_id="seed", payload={"job_urls_file": str(job_urls_file)})
+
+	result = await stage.execute(msg)
+
+	assert not result.success
+	assert result.error_type == "InvalidJobUrlsFile"
+
+
+async def test_url_list_file_exploring_fails_when_no_valid_urls_extract(tmp_path) -> None:
+	job_urls_file = tmp_path / "job_urls.json"
+	job_urls_file.write_text(json.dumps(["https://example.com/jobs/123"]), encoding="utf-8")
+	stage = UrlListFileExploringStage(
+		AppConfig(),
+		extractor=MockExtractor(error=ValueError("Invalid job URL: https://example.com/jobs/123")),
+	)
+	msg = Message(run_id="seed", payload={"job_urls_file": str(job_urls_file)})
+
+	result = await stage.execute(msg)
+
+	assert not result.success
+	assert result.error_type == "NoValidJobUrls"
 
 
 async def test_exploring_uses_ats_registry_when_platform_scraper_missing() -> None:

@@ -211,3 +211,36 @@ async def test_repository_upsert_is_idempotent(repo_db: tuple[aiosqlite.Connecti
 	async with db.execute("SELECT COUNT(*) FROM job_listings WHERE run_id = ?", ("idem_999",)) as cur:
 		row = await cur.fetchone()
 	assert row[0] == 1
+
+
+async def test_concluding_skips_duplicate_terminal_listing(repo_db: tuple[aiosqlite.Connection, JobRepository], tmp_path: Path) -> None:
+	db, repo = repo_db
+	first_ctx = _full_context("acme_first")
+	second_listing = first_ctx.listing.model_copy()
+	second_ctx = _full_context("acme_second").model_copy(update={"listing": second_listing})
+
+	config = AppConfig(
+		base_dir=str(tmp_path),
+		resume_dir=str(tmp_path / "resumes"),
+		db_path=str(tmp_path / "pipeline.db"),
+		master_resume=str(tmp_path / "resumes" / "master.md"),
+	)
+	stage = ConcludingStage(config, repo)
+
+	await repo.upsert_listing(first_ctx.listing, first_ctx.run_id)
+	first_result = await stage.execute(Message(run_id=first_ctx.run_id, payload=first_ctx.model_dump()))
+	assert first_result.success
+
+	await repo.upsert_listing(second_ctx.listing, second_ctx.run_id)
+	second_result = await stage.execute(Message(run_id=second_ctx.run_id, payload=second_ctx.model_dump()))
+	assert second_result.success
+
+	async with db.execute("SELECT COUNT(*) FROM job_applications") as cur:
+		row = await cur.fetchone()
+	assert row is not None
+	assert row[0] == 1
+
+	async with db.execute("SELECT run_id FROM listing_identities") as cur:
+		identity_row = await cur.fetchone()
+	assert identity_row is not None
+	assert identity_row[0] == first_ctx.run_id

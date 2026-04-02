@@ -234,6 +234,25 @@ async def test_form_submission_dryrun_forces_next_page_action(test_config: Any) 
 	assert page.file_locator.files == ["/tmp/resume.pdf"]
 
 
+async def test_form_submission_apply_dryrun_mode_skips_submit(test_config: Any) -> None:
+	page = MockPage()
+	stage = FormSubmissionStage(test_config, page, executor=StubExecutor([]))
+
+	result = await stage.execute(
+		Message(
+			run_id="acme_123",
+			payload=_ctx().model_dump(),
+			metadata={"run_mode": "apply-dryrun"},
+		)
+	)
+
+	assert result.success
+	out_ctx = JobApplicationContext.model_validate(result.output)
+	assert out_ctx.form_session is not None
+	assert out_ctx.form_session.last_advance_action == "done"
+	assert out_ctx.form_session.page_index == 0
+
+
 async def test_form_submission_fails_when_llm_completion_missing(test_config: Any) -> None:
 	page = MockPage()
 	stage = FormSubmissionStage(test_config, page, executor=StubExecutor([]))

@@ -52,6 +52,11 @@ def parse_args() -> argparse.Namespace:
 		help="Manual mode: single job posting URL to process",
 	)
 	parser.add_argument(
+		"--job-urls-file",
+		default="",
+		help="Manual mode: JSON file containing a list of job posting URLs to process",
+	)
+	parser.add_argument(
 		"--job-platform",
 		default="",
 		help="Optional manual platform hint (e.g. linkedin, indeed, custom)",
@@ -104,6 +109,7 @@ async def amain() -> int:
 		mode=args.mode,
 		platforms=_parse_csv(args.platforms),
 		job_url=args.job_url,
+		job_urls_file=args.job_urls_file,
 		job_platform=args.job_platform,
 		keywords=_parse_csv(args.keywords),
 		location=args.location,

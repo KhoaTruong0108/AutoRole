@@ -6,10 +6,10 @@ from types import SimpleNamespace
 import pytest
 
 from autorole.context import JobApplicationContext
-from autorole.queue import DEAD_LETTER_Q, FORM_SUB_Q, InMemoryQueueBackend, LLM_FIELD_COMPLETER_Q
+from autorole.queue import DEAD_LETTER_Q, FORM_SUB_Q, LLM_FIELD_COMPLETER_Q
 from autorole.workers.base import WorkerConfig
 from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
-from tests.conftest import MockStage, load_fixture, make_worker_message
+from tests.conftest import MockStage, load_fixture, make_worker_message, queue_row_count
 
 
 class _ExplodingStage:
@@ -23,11 +23,11 @@ def _result(success: bool, output: object = None, error: str = "") -> SimpleName
 
 
 @pytest.mark.asyncio
-async def test_llm_field_completer_worker_success(repo, tmp_path):
+async def test_llm_field_completer_worker_success(repo, queue_backend, tmp_path):
     input_fixture = load_fixture("llm_field_completer_input.json")
     output_fixture = load_fixture("form_submission_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(LLM_FIELD_COMPLETER_Q, FORM_SUB_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = LLMFieldCompleterWorker(
         stage=MockStage(_result(True, output_fixture)),
@@ -55,10 +55,10 @@ async def test_llm_field_completer_worker_success(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_llm_field_completer_worker_stage_failure_routes_to_dlq(repo, tmp_path):
+async def test_llm_field_completer_worker_stage_failure_routes_to_dlq(repo, queue_backend, tmp_path):
     input_fixture = load_fixture("llm_field_completer_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(LLM_FIELD_COMPLETER_Q, FORM_SUB_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = LLMFieldCompleterWorker(
         stage=MockStage(_result(False, None, "completion failed")),
@@ -80,10 +80,10 @@ async def test_llm_field_completer_worker_stage_failure_routes_to_dlq(repo, tmp_
 
 
 @pytest.mark.asyncio
-async def test_llm_field_completer_worker_unhandled_exception_nacks(repo, tmp_path):
+async def test_llm_field_completer_worker_unhandled_exception_nacks(repo, queue_backend, db, tmp_path):
     input_fixture = load_fixture("llm_field_completer_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(LLM_FIELD_COMPLETER_Q, FORM_SUB_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = LLMFieldCompleterWorker(
         stage=_ExplodingStage(),
@@ -100,7 +100,6 @@ async def test_llm_field_completer_worker_unhandled_exception_nacks(repo, tmp_pa
 
     await worker.process(queue, pulled)
 
-    nacked = await queue.pull(LLM_FIELD_COMPLETER_Q)
-    assert nacked is not None
+    assert await queue_row_count(db, LLM_FIELD_COMPLETER_Q) == 1
     assert await queue.pull(FORM_SUB_Q) is None
     assert await queue.pull(DEAD_LETTER_Q) is None

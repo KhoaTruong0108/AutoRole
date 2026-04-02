@@ -10,9 +10,9 @@ async def run_reaper(db: aiosqlite.Connection, interval_seconds: float = 30.0) -
         await db.execute(
             """
             UPDATE queue_messages
-            SET status = 'pending', visible_after = datetime('now')
+            SET status = 'queued', visible_after = datetime('now')
             WHERE status = 'processing'
-              AND visible_after < datetime('now')
+              AND julianday(visible_after) < julianday('now')
             """
         )
         await db.commit()

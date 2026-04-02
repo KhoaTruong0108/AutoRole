@@ -6,10 +6,10 @@ from types import SimpleNamespace
 import pytest
 
 from autorole.context import JobApplicationContext
-from autorole.queue import CONCLUDING_Q, DEAD_LETTER_Q, FORM_INTEL_Q, FORM_SUB_Q, InMemoryQueueBackend
+from autorole.queue import CONCLUDING_Q, DEAD_LETTER_Q, FORM_INTEL_Q, FORM_SUB_Q
 from autorole.workers.base import WorkerConfig
 from autorole.workers.form_submission import FormSubmissionWorker
-from tests.conftest import MockStage, load_fixture, make_worker_message
+from tests.conftest import MockStage, load_fixture, make_worker_message, queue_row_count
 
 
 class _ExplodingStage:
@@ -23,10 +23,10 @@ def _result(success: bool, output: object = None, error: str = "") -> SimpleName
 
 
 @pytest.mark.asyncio
-async def test_form_submission_worker_loop_requeues_to_form_intel(repo, tmp_path):
+async def test_form_submission_worker_loop_requeues_to_form_intel(repo, queue_backend, tmp_path):
     input_fixture = load_fixture("form_submission_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(FORM_SUB_Q, CONCLUDING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = FormSubmissionWorker(
         stage=MockStage(_result(True, input_fixture)),
@@ -50,11 +50,11 @@ async def test_form_submission_worker_loop_requeues_to_form_intel(repo, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_form_submission_worker_pass_to_concluding(repo, tmp_path):
+async def test_form_submission_worker_pass_to_concluding(repo, queue_backend, tmp_path):
     input_fixture = load_fixture("form_submission_input.json")
     pass_output = load_fixture("concluding_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(FORM_SUB_Q, CONCLUDING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = FormSubmissionWorker(
         stage=MockStage(_result(True, pass_output)),
@@ -79,10 +79,10 @@ async def test_form_submission_worker_pass_to_concluding(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_form_submission_worker_stage_failure_routes_to_dlq(repo, tmp_path):
+async def test_form_submission_worker_stage_failure_routes_to_dlq(repo, queue_backend, tmp_path):
     input_fixture = load_fixture("form_submission_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(FORM_SUB_Q, CONCLUDING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = FormSubmissionWorker(
         stage=MockStage(_result(False, None, "submission failed")),
@@ -104,10 +104,10 @@ async def test_form_submission_worker_stage_failure_routes_to_dlq(repo, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_form_submission_worker_unhandled_exception_nacks(repo, tmp_path):
+async def test_form_submission_worker_unhandled_exception_nacks(repo, queue_backend, db, tmp_path):
     input_fixture = load_fixture("form_submission_input.json")
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(FORM_SUB_Q, CONCLUDING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = FormSubmissionWorker(
         stage=_ExplodingStage(),
@@ -124,7 +124,6 @@ async def test_form_submission_worker_unhandled_exception_nacks(repo, tmp_path):
 
     await worker.process(queue, pulled)
 
-    nacked = await queue.pull(FORM_SUB_Q)
-    assert nacked is not None
+    assert await queue_row_count(db, FORM_SUB_Q) == 1
     assert await queue.pull(CONCLUDING_Q) is None
     assert await queue.pull(DEAD_LETTER_Q) is None

@@ -16,6 +16,7 @@ from autorole.queue import EXPLORING_Q, SqliteQueueBackend
 async def amain() -> int:
     parser = argparse.ArgumentParser(description="Seed AutoRole queue with a new job request")
     parser.add_argument("--job-url", default="")
+    parser.add_argument("--job-urls-file", default="")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--resume-run-id", default="")
     parser.add_argument("--from-stage", default="")
@@ -42,8 +43,13 @@ async def amain() -> int:
             await backend.enqueue(start_queue, seed)
             return 0
 
+        if args.job_url.strip() and args.job_urls_file.strip():
+            raise RuntimeError("Use only one of --job-url or --job-urls-file")
+
         if args.job_url.strip():
             payload = {"job_url": args.job_url.strip(), "max_listings": args.max_listings}
+        elif args.job_urls_file.strip():
+            payload = {"job_urls_file": args.job_urls_file.strip(), "max_listings": args.max_listings}
         else:
             payload = {"search_config": config.search.model_dump(), "max_listings": args.max_listings}
 

@@ -7,7 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from autorole.context import ExplorationSeed, JobApplicationContext
-from autorole.queue import PACKAGING_Q, Message, QueueBackend
+from autorole.queue import Message, QueueBackend, TAILORING_Q
 from autorole.workers.base import StageWorker
 
 
@@ -27,12 +27,25 @@ class ExploringWorker(StageWorker):
         if result is None:
             delay = self._backoff(msg.attempt)
             await queue.nack(self._config.input_queue, msg.message_id, delay)
+            self._logger.error(
+                "failed to process message stage=%s run_id=%s message_id=%s because=unhandled exception",
+                self.name,
+                msg.run_id,
+                msg.message_id,
+            )
             self._logger.exception("unhandled exception stage=%s run_id=%s", self.name, msg.run_id)
             return
 
         if not getattr(result, "success", False):
             await queue.enqueue(msg.dead_letter_queue, msg)
             await queue.ack(self._config.input_queue, msg.message_id)
+            self._logger.warning(
+                "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+                self.name,
+                msg.run_id,
+                msg.message_id,
+                getattr(result, "error", "exploring_failed"),
+            )
             self._logger.warning(
                 "blocked stage=%s run_id=%s reason=%s",
                 self.name,
@@ -80,6 +93,12 @@ class ExploringWorker(StageWorker):
         except Exception:
             delay = self._backoff(msg.attempt)
             await queue.nack(self._config.input_queue, msg.message_id, delay)
+            self._logger.error(
+                "failed to process message stage=%s run_id=%s message_id=%s because=unhandled exception",
+                self.name,
+                msg.run_id,
+                msg.message_id,
+            )
             self._logger.exception("unhandled exception stage=%s run_id=%s", self.name, msg.run_id)
             return
 
@@ -87,6 +106,13 @@ class ExploringWorker(StageWorker):
             await queue.enqueue(msg.dead_letter_queue, msg)
             await queue.ack(self._config.input_queue, msg.message_id)
             reason = "No job listings found across all configured platforms"
+            self._logger.warning(
+                "failed to process message stage=%s run_id=%s message_id=%s because=%s",
+                self.name,
+                msg.run_id,
+                msg.message_id,
+                reason,
+            )
             self._logger.warning("blocked stage=%s run_id=%s reason=%s", self.name, msg.run_id, reason)
             if self._on_block is not None:
                 self._on_block(msg.run_id, reason)
@@ -98,9 +124,9 @@ class ExploringWorker(StageWorker):
         transport_run_id = self._seed_transport_id(seed)
         child = Message(
             run_id=transport_run_id,
-            stage="qualification",
+            stage="scoring",
             payload=seed.model_dump(mode="json"),
-            reply_queue=PACKAGING_Q,
+            reply_queue=TAILORING_Q,
             dead_letter_queue=msg.dead_letter_queue,
             metadata=dict(msg.metadata),
         )

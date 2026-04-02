@@ -14,7 +14,7 @@ from autorole.context import JobListing
 from autorole.db.repository import JobRepository
 from autorole.integrations.scrapers.base import JobBoardScraper
 from autorole.job_pipeline import init_db
-from autorole.queue import DEAD_LETTER_Q, Message
+from autorole.queue import DEAD_LETTER_Q, Message, SqliteQueueBackend
 
 
 @pytest.fixture
@@ -119,3 +119,15 @@ async def db(tmp_path: Path) -> Any:
 @pytest_asyncio.fixture
 async def repo(db: Any) -> JobRepository:
 	return JobRepository(db)
+
+
+@pytest.fixture
+def queue_backend(db: Any) -> SqliteQueueBackend:
+	return SqliteQueueBackend(db)
+
+
+async def queue_row_count(db: Any, queue_name: str) -> int:
+	async with db.execute("SELECT COUNT(*) FROM queue_messages WHERE queue_name = ?", (queue_name,)) as cur:
+		row = await cur.fetchone()
+	assert row is not None
+	return int(row[0])

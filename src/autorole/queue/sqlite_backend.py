@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import aiosqlite
 
@@ -13,6 +14,15 @@ class SqliteQueueBackend(QueueBackend):
         self._db = db
 
     async def enqueue(self, queue_name: str, message: Message) -> str:
+        stored_message_id = message.message_id
+        async with self._db.execute(
+            "SELECT 1 FROM queue_messages WHERE message_id = ? LIMIT 1",
+            (stored_message_id,),
+        ) as cur:
+            existing = await cur.fetchone()
+        if existing is not None:
+            stored_message_id = str(uuid4())
+
         now = datetime.now(timezone.utc).isoformat()
         await self._db.execute(
             """
@@ -29,10 +39,10 @@ class SqliteQueueBackend(QueueBackend):
                 status,
                 enqueued_at,
                 visible_after
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
             """,
             (
-                message.message_id,
+                stored_message_id,
                 queue_name,
                 message.run_id,
                 message.stage,
@@ -46,7 +56,7 @@ class SqliteQueueBackend(QueueBackend):
             ),
         )
         await self._db.commit()
-        return message.message_id
+        return stored_message_id
 
     async def pull(self, queue_name: str, visibility_timeout_seconds: int = 300) -> Message | None:
         now = datetime.now(timezone.utc)
@@ -68,7 +78,7 @@ class SqliteQueueBackend(QueueBackend):
                     metadata
                 FROM queue_messages
                 WHERE queue_name = ?
-                  AND status = 'pending'
+                                    AND status IN ('queued', 'pending')
                   AND visible_after <= ?
                 ORDER BY enqueued_at ASC
                 LIMIT 1
@@ -117,7 +127,7 @@ class SqliteQueueBackend(QueueBackend):
         await self._db.execute(
             """
             UPDATE queue_messages
-            SET status = 'pending', visible_after = ?
+            SET status = 'queued', visible_after = ?
             WHERE message_id = ?
             """,
             (visible_after, message_id),

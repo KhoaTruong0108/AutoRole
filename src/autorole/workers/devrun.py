@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,14 +29,15 @@ from autorole.queue import (
     FORM_INTEL_Q,
     LLM_FIELD_COMPLETER_Q,
     FORM_SUB_Q,
-    InMemoryQueueBackend,
     Message,
     PACKAGING_Q,
     SCORING_Q,
+    TAILORING_Q,
     SESSION_Q,
+    SqliteQueueBackend,
 )
 from autorole.stages.concluding import ConcludingStage
-from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
+from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage, UrlListFileExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
 from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
@@ -50,8 +52,9 @@ from autorole.workers.form_intelligence import FormIntelligenceWorker
 from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
-from autorole.workers.qualification import QualificationWorker
+from autorole.workers.scoring import ScoringWorker
 from autorole.workers.session import SessionWorker
+from autorole.workers.tailoring import TailoringWorker
 
 
 def _make_llm_client(config: AppConfig) -> OpenAILLMClient | AnthropicLLMClient | OllamaLLMClient:
@@ -71,7 +74,8 @@ def _make_renderer(config: AppConfig) -> PandocRenderer | WeasyPrintRenderer:
 def _stage_to_queues(stage: str) -> tuple[str, str]:
     mapping = {
         "exploring": (EXPLORING_Q, SCORING_Q),
-        "qualification": (SCORING_Q, PACKAGING_Q),
+        "scoring": (SCORING_Q, TAILORING_Q),
+        "tailoring": (TAILORING_Q, PACKAGING_Q),
         "packaging": (PACKAGING_Q, SESSION_Q),
         "session": (SESSION_Q, FORM_INTEL_Q),
         "form_intelligence": (FORM_INTEL_Q, LLM_FIELD_COMPLETER_Q),
@@ -103,16 +107,6 @@ def _build_message(
         dead_letter_queue=DEAD_LETTER_Q,
         metadata=metadata,
     )
-
-
-async def _drain_queue(queue: InMemoryQueueBackend, queue_name: str) -> list[Message]:
-    messages: list[Message] = []
-    while True:
-        message = await queue.pull(queue_name)
-        if message is None:
-            break
-        messages.append(message)
-    return messages
 
 
 def _listing_summary(payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -159,6 +153,7 @@ async def _build_worker(
     *,
     headless: bool,
     search_platforms: list[str] | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> tuple[StageWorker, Any, Any, Any]:
     llm_client = _make_llm_client(cfg)
     renderer = _make_renderer(cfg)
@@ -170,7 +165,7 @@ async def _build_worker(
         poll_interval_seconds=0,
     )
 
-    if stage in {"qualification", "session", "form_intelligence", "llm_field_completer", "form_submission", "exploring"}:
+    if stage in {"scoring", "session", "form_intelligence", "llm_field_completer", "form_submission", "exploring"}:
         from playwright.async_api import async_playwright
 
         playwright = await async_playwright().start()
@@ -200,23 +195,48 @@ async def _build_worker(
     }
 
     if stage == "exploring":
-        active_platforms = search_platforms or list(cfg.search.platforms)
-        scrapers = {
-            "linkedin": LinkedInScraper(page),
-            "indeed": IndeedScraper(page),
-        }
-        discovery_providers = build_discovery_providers(
-            active_platforms,
-            llm_client=llm_client,
-            render_html=render_html,
-        )
-        worker = ExploringWorker(
-            stage=ExploringStage(cfg, scrapers=scrapers, discovery_providers=discovery_providers),
+        exploring_payload = payload if isinstance(payload, dict) else {}
+        platform_hint = str(exploring_payload.get("job_platform", "")).strip() or None
+        if isinstance(exploring_payload.get("job_url"), str) and exploring_payload.get("job_url", "").strip():
+            worker = ExploringWorker(
+                stage=ManualUrlExploringStage(
+                    cfg,
+                    extractor=GenericJobPostingExtractor(page),
+                    platform_hint=platform_hint,
+                ),
+                **shared,
+            )
+        elif isinstance(exploring_payload.get("job_urls_file"), str) and exploring_payload.get("job_urls_file", "").strip():
+            worker = ExploringWorker(
+                stage=UrlListFileExploringStage(
+                    cfg,
+                    extractor=GenericJobPostingExtractor(page),
+                    platform_hint=platform_hint,
+                ),
+                **shared,
+            )
+        else:
+            active_platforms = search_platforms or list(cfg.search.platforms)
+            scrapers = {
+                "linkedin": LinkedInScraper(page),
+                "indeed": IndeedScraper(page),
+            }
+            discovery_providers = build_discovery_providers(
+                active_platforms,
+                llm_client=llm_client,
+                render_html=render_html,
+            )
+            worker = ExploringWorker(
+                stage=ExploringStage(cfg, scrapers=scrapers, discovery_providers=discovery_providers),
+                **shared,
+            )
+    elif stage == "scoring":
+        worker = ScoringWorker(
+            scoring_stage=ScoringStage(cfg, llm_client, page),
             **shared,
         )
-    elif stage == "qualification":
-        worker = QualificationWorker(
-            scoring_stage=ScoringStage(cfg, llm_client, page),
+    elif stage == "tailoring":
+        worker = TailoringWorker(
             tailoring_stage=TailoringStage(cfg, llm_client),
             max_attempts=cfg.tailoring.max_attempts,
             **shared,
@@ -284,10 +304,197 @@ async def _load_payload(args: argparse.Namespace, repo: JobRepository) -> dict[s
             raise ValueError(f"No checkpoint found for run_id={args.input_run_id}")
         return checkpoint[1]
 
+    if args.job_urls_file:
+        payload: dict[str, Any] = {"job_urls_file": args.job_urls_file}
+        if args.job_platform.strip():
+            payload["job_platform"] = args.job_platform.strip()
+        return payload
+
     if not args.input_file:
-        raise ValueError("One of --input-run-id or --input-file is required")
+        raise ValueError("One of --input-run-id, --input-file, or --job-urls-file is required")
 
     return json.loads(Path(args.input_file).read_text(encoding="utf-8"))
+
+
+async def _peek_queue_message(
+    db: aiosqlite.Connection,
+    queue_name: str,
+    *,
+    message_id: str = "",
+) -> Message | None:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    params: list[object] = [queue_name, now_iso]
+    query = """
+        SELECT
+            message_id,
+            run_id,
+            stage,
+            payload,
+            reply_queue,
+            dead_letter_queue,
+            attempt,
+            metadata
+        FROM queue_messages
+        WHERE queue_name = ?
+                    AND status IN ('queued', 'pending')
+          AND visible_after <= ?
+    """
+    if message_id.strip():
+        query += " AND message_id = ?"
+        params.append(message_id.strip())
+    query += " ORDER BY enqueued_at ASC LIMIT 1"
+
+    async with db.execute(query, tuple(params)) as cur:
+        row = await cur.fetchone()
+    if row is None:
+        return None
+
+    return Message(
+        message_id=str(row[0]),
+        run_id=str(row[1]),
+        stage=str(row[2]),
+        payload=json.loads(row[3]),
+        reply_queue=str(row[4]),
+        dead_letter_queue=str(row[5]),
+        attempt=int(row[6]),
+        metadata=json.loads(row[7] or "{}"),
+    )
+
+
+async def _claim_queue_message(
+    db: aiosqlite.Connection,
+    queue_name: str,
+    *,
+    message_id: str = "",
+    visibility_timeout_seconds: int = 300,
+) -> Message | None:
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    visible_after = (now.timestamp() + visibility_timeout_seconds)
+    next_visible_after = datetime.fromtimestamp(visible_after, timezone.utc).isoformat()
+
+    params: list[object] = [queue_name, now_iso]
+    query = """
+        SELECT
+            message_id,
+            run_id,
+            stage,
+            payload,
+            reply_queue,
+            dead_letter_queue,
+            attempt,
+            metadata
+        FROM queue_messages
+        WHERE queue_name = ?
+                    AND status IN ('queued', 'pending')
+          AND visible_after <= ?
+    """
+    if message_id.strip():
+        query += " AND message_id = ?"
+        params.append(message_id.strip())
+    query += " ORDER BY enqueued_at ASC LIMIT 1"
+
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        # Reclaim expired in-flight rows so local dev runs can resume processing without
+        # requiring the long-running reaper task.
+        await db.execute(
+            """
+            UPDATE queue_messages
+            SET status = 'queued', visible_after = ?
+            WHERE queue_name = ?
+              AND status = 'processing'
+              AND visible_after <= ?
+            """,
+            (now_iso, queue_name, now_iso),
+        )
+
+        async with db.execute(query, tuple(params)) as cur:
+            row = await cur.fetchone()
+
+        if row is None:
+            await db.rollback()
+            return None
+
+        claimed_message_id = str(row[0])
+        await db.execute(
+            """
+            UPDATE queue_messages
+            SET status = 'processing', visible_after = ?
+            WHERE message_id = ?
+            """,
+            (next_visible_after, claimed_message_id),
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return Message(
+        message_id=str(row[0]),
+        run_id=str(row[1]),
+        stage=str(row[2]),
+        payload=json.loads(row[3]),
+        reply_queue=str(row[4]),
+        dead_letter_queue=str(row[5]),
+        attempt=int(row[6]),
+        metadata=json.loads(row[7] or "{}"),
+    )
+
+
+async def _list_queue_messages(
+    db: aiosqlite.Connection,
+    queue_name: str,
+    *,
+    run_id: str = "",
+) -> list[Message]:
+    params: list[object] = [queue_name]
+    query = """
+        SELECT
+            message_id,
+            run_id,
+            stage,
+            payload,
+            reply_queue,
+            dead_letter_queue,
+            attempt,
+            metadata
+        FROM queue_messages
+        WHERE queue_name = ?
+    """
+    if run_id.strip():
+        query += " AND run_id = ?"
+        params.append(run_id.strip())
+    query += " ORDER BY enqueued_at ASC"
+
+    messages: list[Message] = []
+    async with db.execute(query, tuple(params)) as cur:
+        async for row in cur:
+            messages.append(
+                Message(
+                    message_id=str(row[0]),
+                    run_id=str(row[1]),
+                    stage=str(row[2]),
+                    payload=json.loads(row[3]),
+                    reply_queue=str(row[4]),
+                    dead_letter_queue=str(row[5]),
+                    attempt=int(row[6]),
+                    metadata=json.loads(row[7] or "{}"),
+                )
+            )
+    return messages
+
+
+def _message_mode(message: Message | None, fallback_mode: str) -> str:
+    # Preserve queue message mode by default, but allow explicit CLI overrides.
+    if fallback_mode != "observe":
+        return fallback_mode
+    if message is None:
+        return fallback_mode
+    run_mode = message.metadata.get("run_mode") if isinstance(message.metadata, dict) else None
+    if isinstance(run_mode, str) and run_mode.strip():
+        return run_mode.strip()
+    return fallback_mode
 
 
 def _parse_args() -> argparse.Namespace:
@@ -295,6 +502,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--stage", required=True)
     parser.add_argument("--input-run-id", default="")
     parser.add_argument("--input-file", default="")
+    parser.add_argument("--job-urls-file", default="")
+    parser.add_argument("--job-platform", default="")
+    parser.add_argument("--from-queue", action="store_true")
+    parser.add_argument("--queue-message-id", default="")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--mode", choices=["observe", "apply", "apply-dryrun"], default="observe")
@@ -303,9 +514,6 @@ def _parse_args() -> argparse.Namespace:
 
 async def amain() -> int:
     args = _parse_args()
-    if args.mode == "observe" and args.stage in {"session", "form_intelligence", "llm_field_completer", "form_submission"}:
-        print(f"[warn] observe mode skips stage '{args.stage}'")
-        return 0
 
     cfg = AppConfig()
     logger = logging.getLogger("autorole.workers.devrun")
@@ -316,18 +524,37 @@ async def amain() -> int:
     async with aiosqlite.connect(Path(cfg.db_path).expanduser()) as db:
         await init_db(db)
         repo = JobRepository(db)
-        payload = await _load_payload(args, repo)
         input_q, reply_q = _stage_to_queues(args.stage)
+        selected_message: Message | None = None
+        queue = SqliteQueueBackend(db)
+
+        if args.from_queue:
+            selected_message = await _claim_queue_message(
+                db,
+                input_q,
+                message_id=args.queue_message_id,
+            )
+            if selected_message is None:
+                selected = args.queue_message_id.strip()
+                suffix = f" message_id={selected}" if selected else ""
+                raise ValueError(f"No queued message found in queue {input_q}{suffix}")
+            payload = selected_message.payload
+        else:
+            payload = await _load_payload(args, repo)
+
+        effective_mode = _message_mode(selected_message, args.mode)
+        if effective_mode == "observe" and args.stage in {"session", "form_intelligence", "llm_field_completer", "form_submission"}:
+            print(f"[warn] observe mode skips stage '{args.stage}'")
+            return 0
 
         if args.dry_run:
             print(f"=== devrun: {args.stage} ===")
-            print(f"run_id:   {payload.get('run_id', 'devrun-seed')}")
+            print(f"run_id:   {(selected_message.run_id if selected_message is not None else payload.get('run_id', 'devrun-seed'))}")
             print(f"input_q:  {input_q}")
             print(f"reply_q:  {reply_q}")
             print("mode:     dry-run")
             return 0
 
-        queue = InMemoryQueueBackend()
         worker, playwright, closable, page = await _build_worker(
             args.stage,
             cfg,
@@ -336,23 +563,33 @@ async def amain() -> int:
             artifacts_root,
             headless=args.headless,
             search_platforms=_effective_search_platforms(cfg, payload, args.stage),
+            payload=payload,
         )
 
         await _prepare_stage_page(args.stage, payload, page)
 
-        msg = _build_message(
-            payload,
-            input_q,
-            reply_q,
-            stage=args.stage,
-            mode=args.mode,
-        )
-        await queue.enqueue(input_q, msg)
-        pulled = await queue.pull(input_q)
-        assert pulled is not None
+        if selected_message is not None:
+            msg = selected_message
+            metadata = dict(msg.metadata or {})
+            metadata["run_mode"] = effective_mode
+            if args.stage == "form_submission" and effective_mode == "apply-dryrun":
+                metadata["dryrun_stop_after_submit"] = True
+            msg.metadata = metadata
+        else:
+            msg = _build_message(
+                payload,
+                input_q,
+                reply_q,
+                stage=args.stage,
+                mode=effective_mode,
+            )
+            await queue.enqueue(input_q, msg)
+            pulled = await queue.pull(input_q)
+            assert pulled is not None
+            msg = pulled
 
         try:
-            await worker.process(queue, pulled)
+            await worker.process(queue, msg)
             await asyncio.sleep(10)  # Wait for any async finalization in worker
         finally:
             try:
@@ -363,10 +600,10 @@ async def amain() -> int:
             except Exception:
                 pass
 
-        outputs = await _drain_queue(queue, reply_q)
-        dlq_messages = await _drain_queue(queue, DEAD_LETTER_Q)
+        outputs = await _list_queue_messages(db, reply_q, run_id=msg.run_id)
+        dlq_messages = await _list_queue_messages(db, DEAD_LETTER_Q, run_id=msg.run_id)
         loop_q = FORM_INTEL_Q if args.stage == "form_submission" else input_q
-        loop_messages = await _drain_queue(queue, loop_q)
+        loop_messages = await _list_queue_messages(db, loop_q, run_id=msg.run_id)
 
         decision = "pass"
         if dlq_messages:
@@ -377,6 +614,8 @@ async def amain() -> int:
         print(f"=== devrun: {args.stage} ===")
         print(f"run_id:   {msg.run_id}")
         print(f"decision: {decision}")
+        if selected_message is not None:
+            print(f"source:   queue:{input_q}")
         print("")
         print(f"[output queue: {reply_q}]")
         if not outputs:

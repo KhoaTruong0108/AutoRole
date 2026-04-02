@@ -9,11 +9,11 @@ from autorole.queue.backend import (
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
+    TAILORING_Q,
     SESSION_Q,
     Message,
     QueueBackend,
 )
-from autorole.queue.memory_backend import InMemoryQueueBackend
 from autorole.queue.reaper import run_reaper
 from autorole.queue.sqlite_backend import SqliteQueueBackend
 
@@ -22,6 +22,7 @@ __all__ = [
     "Message",
     "EXPLORING_Q",
     "SCORING_Q",
+    "TAILORING_Q",
     "PACKAGING_Q",
     "SESSION_Q",
     "FORM_INTEL_Q",
@@ -29,7 +30,6 @@ __all__ = [
     "FORM_SUB_Q",
     "CONCLUDING_Q",
     "DEAD_LETTER_Q",
-    "InMemoryQueueBackend",
     "SqliteQueueBackend",
     "run_reaper",
 ]

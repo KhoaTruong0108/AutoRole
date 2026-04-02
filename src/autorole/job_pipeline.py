@@ -30,13 +30,15 @@ from autorole.queue import (
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
+    TAILORING_Q,
     SESSION_Q,
-    InMemoryQueueBackend,
     Message,
+    SqliteQueueBackend,
+    run_reaper,
 )
 from autorole.stage_base import STAGE_ORDER
 from autorole.stages.concluding import ConcludingStage
-from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage
+from autorole.stages.exploring import ExploringStage, ManualUrlExploringStage, UrlListFileExploringStage
 from autorole.stages.form_intelligence import FormIntelligenceStage
 from autorole.stages.llm_field_completer import LLMFieldCompleterStage
 from autorole.stages.form_submission import FormSubmissionStage
@@ -51,8 +53,9 @@ from autorole.workers.form_intelligence import FormIntelligenceWorker
 from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
-from autorole.workers.qualification import QualificationWorker
+from autorole.workers.scoring import ScoringWorker
 from autorole.workers.session import SessionWorker
+from autorole.workers.tailoring import TailoringWorker
 
 
 @dataclass
@@ -60,6 +63,7 @@ class RunConfig:
     mode: str = "observe"
     platforms: list[str] = field(default_factory=lambda: ["linkedin", "indeed"])
     job_url: str = ""
+    job_urls_file: str = ""
     job_platform: str = ""
     keywords: list[str] = field(default_factory=list)
     location: str = ""
@@ -133,8 +137,7 @@ def _stage_to_queue(stage_name: str) -> str:
     mapping = {
         "exploring": EXPLORING_Q,
         "scoring": SCORING_Q,
-        "tailoring": SCORING_Q,
-        "qualification": SCORING_Q,
+        "tailoring": TAILORING_Q,
         "packaging": PACKAGING_Q,
         "session": SESSION_Q,
         "form_intelligence": FORM_INTEL_Q,
@@ -148,7 +151,8 @@ def _stage_to_queue(stage_name: str) -> str:
 def _next_reply_queue(input_queue: str) -> str:
     mapping = {
         EXPLORING_Q: SCORING_Q,
-        SCORING_Q: PACKAGING_Q,
+        SCORING_Q: TAILORING_Q,
+        TAILORING_Q: PACKAGING_Q,
         PACKAGING_Q: SESSION_Q,
         SESSION_Q: FORM_INTEL_Q,
         FORM_INTEL_Q: LLM_FIELD_COMPLETER_Q,
@@ -162,7 +166,8 @@ def _next_reply_queue(input_queue: str) -> str:
 def _queue_stage_name(queue_name: str) -> str:
     mapping = {
         EXPLORING_Q: "exploring",
-        SCORING_Q: "qualification",
+        SCORING_Q: "scoring",
+        TAILORING_Q: "tailoring",
         PACKAGING_Q: "packaging",
         SESSION_Q: "session",
         FORM_INTEL_Q: "form_intelligence",
@@ -254,6 +259,7 @@ class JobApplicationPipeline:
             return 2
 
         is_manual_url_mode = bool(rc.job_url.strip())
+        is_job_url_file_mode = bool(rc.job_urls_file.strip())
         is_resume_mode = bool(rc.resume_run_id.strip())
         platforms = [p.strip() for p in rc.platforms if p.strip()]
 
@@ -265,7 +271,12 @@ class JobApplicationPipeline:
         if rc.location:
             search_config["location"] = rc.location
 
-        if not is_resume_mode and not is_manual_url_mode and not platforms:
+        direct_exploring_modes = int(is_manual_url_mode) + int(is_job_url_file_mode)
+        if direct_exploring_modes > 1:
+            print("Use only one of --job-url or --job-urls-file")
+            return 2
+
+        if not is_resume_mode and not is_manual_url_mode and not is_job_url_file_mode and not platforms:
             print("No platforms selected")
             return 2
 
@@ -276,8 +287,9 @@ class JobApplicationPipeline:
 
                 llm_client = make_llm_client(config)
                 renderer = make_renderer(config)
-                queue = InMemoryQueueBackend()
+                queue = SqliteQueueBackend(db)
                 tracker = _CompletionTracker(expected=rc.max_listings)
+                reaper_task = asyncio.create_task(run_reaper(db), name="queue-reaper")
 
                 async with async_playwright() as playwright:
                     browser = await playwright.chromium.launch(headless=rc.headless)
@@ -309,6 +321,11 @@ class JobApplicationPipeline:
                         platform_hint = rc.job_platform.strip() or None
                         exploring_stage = ManualUrlExploringStage(config, extractor=extractor, platform_hint=platform_hint)
                         seed_payload: dict[str, Any] = {"job_url": rc.job_url.strip(), "max_listings": rc.max_listings}
+                    elif is_job_url_file_mode:
+                        extractor = GenericJobPostingExtractor(scrape_page)
+                        platform_hint = rc.job_platform.strip() or None
+                        exploring_stage = UrlListFileExploringStage(config, extractor=extractor, platform_hint=platform_hint)
+                        seed_payload = {"job_urls_file": rc.job_urls_file.strip(), "max_listings": rc.max_listings}
                     else:
                         discovery_providers = build_discovery_providers(
                             platforms,
@@ -394,6 +411,8 @@ class JobApplicationPipeline:
                         for task in tasks:
                             task.cancel()
                         await asyncio.gather(*tasks, return_exceptions=True)
+                        reaper_task.cancel()
+                        await asyncio.gather(reaper_task, return_exceptions=True)
                         with contextlib.suppress(Exception):
                             await browser_context.close()
                         with contextlib.suppress(Exception):
@@ -456,12 +475,16 @@ class JobApplicationPipeline:
                 on_block=tracker.on_failure,
                 **shared,
             ),
-            "qualification": QualificationWorker(
+            "scoring": ScoringWorker(
                 scoring_stage=ScoringStage(cfg, llm_client, score_page),
+                config=wc(SCORING_Q, TAILORING_Q),
+                on_block=tracker.on_failure,
+                **shared,
+            ),
+            "tailoring": TailoringWorker(
                 tailoring_stage=TailoringStage(cfg, llm_client),
-                config=wc(SCORING_Q, PACKAGING_Q),
+                config=wc(TAILORING_Q, PACKAGING_Q),
                 max_attempts=cfg.tailoring.max_attempts,
-                on_duplicate=tracker.on_success,
                 on_pass=tracker.on_success if self._rc.mode == "observe" else None,
                 on_block=tracker.on_failure,
                 **shared,

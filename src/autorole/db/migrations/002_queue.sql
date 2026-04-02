@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS queue_messages (
     reply_queue         TEXT    NOT NULL,
     dead_letter_queue   TEXT    NOT NULL,
     metadata            TEXT    NOT NULL,
-    status              TEXT    NOT NULL DEFAULT 'pending',
+    status              TEXT    NOT NULL DEFAULT 'queued',
     enqueued_at         TEXT    NOT NULL,
     visible_after       TEXT    NOT NULL
 );

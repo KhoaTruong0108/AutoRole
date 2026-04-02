@@ -9,11 +9,11 @@ import pytest
 from autorole.config import AppConfig
 from autorole.context import ExplorationSeed
 from autorole.context import JobListing
-from autorole.queue import DEAD_LETTER_Q, EXPLORING_Q, InMemoryQueueBackend, SCORING_Q
+from autorole.queue import DEAD_LETTER_Q, EXPLORING_Q, SCORING_Q
 from autorole.stages.exploring import ExploringStage
 from autorole.workers.base import WorkerConfig
 from autorole.workers.exploring import ExploringWorker
-from tests.conftest import MockStage, load_fixture, make_worker_message
+from tests.conftest import MockStage, load_fixture, make_worker_message, queue_row_count
 
 
 class _ExplodingStage:
@@ -48,9 +48,9 @@ def _listing(company: str, job_id: str, platform: str) -> JobListing:
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_success(repo, tmp_path):
+async def test_exploring_worker_success(repo, queue_backend, tmp_path):
     output_fixture = load_fixture("exploration_seed_input.json")
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=MockStage(_result(True, [output_fixture])),
@@ -83,14 +83,14 @@ async def test_exploring_worker_success(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_fanout(repo, tmp_path):
+async def test_exploring_worker_fanout(repo, queue_backend, tmp_path):
     first = load_fixture("exploration_seed_input.json")
     second = load_fixture("exploration_seed_input.json")
     second["listing"]["job_id"] = "9999999"
     second["listing"]["job_url"] = "https://example.com/jobs/9999999"
     second["listing"]["apply_url"] = "https://example.com/jobs/9999999"
 
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=MockStage(_result(True, [first, second])),
@@ -112,8 +112,8 @@ async def test_exploring_worker_fanout(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_stage_failure_routes_to_dlq(repo, tmp_path):
-    queue = InMemoryQueueBackend()
+async def test_exploring_worker_stage_failure_routes_to_dlq(repo, queue_backend, tmp_path):
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=MockStage(_result(False, None, "failed")),
@@ -135,8 +135,8 @@ async def test_exploring_worker_stage_failure_routes_to_dlq(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_unhandled_exception_nacks(repo, tmp_path):
-    queue = InMemoryQueueBackend()
+async def test_exploring_worker_unhandled_exception_nacks(repo, queue_backend, db, tmp_path):
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=_ExplodingStage(),
@@ -152,14 +152,13 @@ async def test_exploring_worker_unhandled_exception_nacks(repo, tmp_path):
 
     await worker.process(queue, pulled)
 
-    nacked = await queue.pull(EXPLORING_Q)
-    assert nacked is not None
+    assert await queue_row_count(db, EXPLORING_Q) == 1
     assert await queue.pull(SCORING_Q) is None
     assert await queue.pull(DEAD_LETTER_Q) is None
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_fanout_is_per_source(repo, tmp_path):
+async def test_exploring_worker_fanout_is_per_source(repo, queue_backend, tmp_path):
     stage = ExploringStage(
         AppConfig(),
         scrapers={
@@ -167,7 +166,7 @@ async def test_exploring_worker_fanout_is_per_source(repo, tmp_path):
             "source_b": _MockScraper([_listing("Beta", "3", "source_b"), _listing("Beta", "4", "source_b")]),
         },
     )
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=stage,
@@ -195,7 +194,7 @@ async def test_exploring_worker_fanout_is_per_source(repo, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_exploring_worker_keeps_cross_source_duplicates_for_qualification(repo, tmp_path):
+async def test_exploring_worker_keeps_cross_source_duplicates_for_qualification(repo, queue_backend, tmp_path):
     duplicate = _listing("Acme", "1", "source_a")
     stage = ExploringStage(
         AppConfig(),
@@ -204,7 +203,7 @@ async def test_exploring_worker_keeps_cross_source_duplicates_for_qualification(
             "source_b": _MockScraper([duplicate, _listing("Beta", "2", "source_b")]),
         },
     )
-    queue = InMemoryQueueBackend()
+    queue = queue_backend
     config = WorkerConfig(EXPLORING_Q, SCORING_Q, DEAD_LETTER_Q, poll_interval_seconds=0)
     worker = ExploringWorker(
         stage=stage,

@@ -24,6 +24,7 @@ from autorole.queue import (
     FORM_SUB_Q,
     PACKAGING_Q,
     SCORING_Q,
+    TAILORING_Q,
     SESSION_Q,
     SqliteQueueBackend,
 )
@@ -43,8 +44,9 @@ from autorole.workers.form_intelligence import FormIntelligenceWorker
 from autorole.workers.llm_field_completer import LLMFieldCompleterWorker
 from autorole.workers.form_submission import FormSubmissionWorker
 from autorole.workers.packaging import PackagingWorker
-from autorole.workers.qualification import QualificationWorker
+from autorole.workers.scoring import ScoringWorker
 from autorole.workers.session import SessionWorker
+from autorole.workers.tailoring import TailoringWorker
 
 
 def _make_llm_client(config: AppConfig) -> OpenAILLMClient | AnthropicLLMClient | OllamaLLMClient:
@@ -114,11 +116,16 @@ async def _build_worker(stage_name: str, repo: JobRepository, logger: logging.Lo
             config=_worker_config(EXPLORING_Q, SCORING_Q),
             **shared,
         )
-    if stage_name == "qualification":
-        return QualificationWorker(
+    if stage_name == "scoring":
+        return ScoringWorker(
             scoring_stage=ScoringStage(cfg, llm_client, score_page),
+            config=_worker_config(SCORING_Q, TAILORING_Q),
+            **shared,
+        )
+    if stage_name == "tailoring":
+        return TailoringWorker(
             tailoring_stage=TailoringStage(cfg, llm_client),
-            config=_worker_config(SCORING_Q, PACKAGING_Q),
+            config=_worker_config(TAILORING_Q, PACKAGING_Q),
             max_attempts=cfg.tailoring.max_attempts,
             **shared,
         )

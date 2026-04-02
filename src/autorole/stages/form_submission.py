@@ -61,7 +61,8 @@ class FormSubmissionStage(Stage):
 		_ = self._config
 		ctx = JobApplicationContext.model_validate(message.payload)
 		metadata = getattr(message, "metadata", {}) or {}
-		dryrun_skip_submit = bool(metadata.get("dryrun_stop_after_submit", False))
+		run_mode = metadata.get("run_mode") if isinstance(metadata, dict) else None
+		dryrun_skip_submit = bool(metadata.get("dryrun_stop_after_submit", False)) or run_mode == "apply-dryrun"
 
 		if (
 			ctx.listing is None
