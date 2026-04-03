@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/autorole"]
+packages = ["src/autorole", "src/autorole_next"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/autorole/integrations/discovery/sites.yaml" = "autorole/integrations/discovery/sites.yaml"
@@ -44,6 +44,7 @@ FoundationLibrary = "https://github.com/KhoaTruong0108/SnapFlow.git"
 
 [project.scripts]
 ar = "autorole.cli.main:app"
+ar-next = "autorole_next.cli.main:main"
 
 [project.optional-dependencies]
 weasyprint = ["weasyprint>=62.0"]
