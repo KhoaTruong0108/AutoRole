@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from .. import _snapflow  # noqa: F401  Ensures the workspace SnapFlow source is first on sys.path.
+from .applications_provider import build_applications_provider_from_env
+from .applications_screen import applications_content
 from .listings_provider import build_listings_provider_from_env
 from .listings_screen import listings_content
 
@@ -35,16 +37,19 @@ def create_tui_app():
         #runs-table,
         #dlq-table,
         #in-process-table,
-        #listings-table {
-            height: 1fr;
+        #listings-table,
+        #applications-table {
+            height: 30%;
         }
 
         #run-details,
         #dlq-details,
         #stage-details,
-        #listings-details {
-            height: 12;
-            overflow: auto;
+        #listings-details-scroll,
+        #applications-details-scroll {
+            height: 1fr;
+            overflow-x: auto;
+            overflow-y: auto;
         }
         """
 
@@ -56,6 +61,8 @@ def create_tui_app():
                         yield stage_monitor_content(build_stage_monitor_provider_from_env())
                     with TabPane("Listings"):
                         yield listings_content(build_listings_provider_from_env())
+                    with TabPane("Applications"):
+                        yield applications_content(build_applications_provider_from_env())
                     with TabPane("Dashboard"):
                         yield dashboard_content()
                     with TabPane("Queue Depths"):
