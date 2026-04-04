@@ -234,6 +234,182 @@ class AutoRoleStoreAdapter(SQLiteStoreAdapter):
             )
             await connection.commit()
 
+    async def upsert_application_packaging(
+        self,
+        correlation_id: str,
+        *,
+        resume_path: str,
+        pdf_path: str,
+    ) -> None:
+        await self._ensure_initialized()
+        aiosqlite = self._import_aiosqlite()
+        async with aiosqlite.connect(self._db_path) as connection:
+            await connection.execute(
+                """
+                INSERT INTO applications (
+                    correlation_id,
+                    status,
+                    resume_path,
+                    pdf_path,
+                    created_at,
+                    updated_at
+                ) VALUES (?, 'packaged', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(correlation_id) DO UPDATE SET
+                    status = 'packaged',
+                    resume_path = excluded.resume_path,
+                    pdf_path = excluded.pdf_path,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    correlation_id,
+                    resume_path,
+                    pdf_path,
+                ),
+            )
+            await connection.commit()
+
+    async def upsert_session(
+        self,
+        correlation_id: str,
+        *,
+        platform: str,
+        authenticated: bool,
+        session_note: str,
+    ) -> None:
+        await self._ensure_initialized()
+        aiosqlite = self._import_aiosqlite()
+        async with aiosqlite.connect(self._db_path) as connection:
+            await connection.execute(
+                """
+                INSERT INTO sessions (
+                    correlation_id,
+                    platform,
+                    authenticated,
+                    session_note,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(correlation_id) DO UPDATE SET
+                    platform = excluded.platform,
+                    authenticated = excluded.authenticated,
+                    session_note = excluded.session_note,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    correlation_id,
+                    platform,
+                    int(authenticated),
+                    session_note,
+                ),
+            )
+            await connection.commit()
+
+    async def upsert_application_status(
+        self,
+        correlation_id: str,
+        *,
+        status: str,
+    ) -> None:
+        await self._ensure_initialized()
+        aiosqlite = self._import_aiosqlite()
+        async with aiosqlite.connect(self._db_path) as connection:
+            await connection.execute(
+                """
+                INSERT INTO applications (
+                    correlation_id,
+                    status,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(correlation_id) DO UPDATE SET
+                    status = excluded.status,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    correlation_id,
+                    status,
+                ),
+            )
+            await connection.commit()
+
+    async def upsert_application_submission(
+        self,
+        correlation_id: str,
+        *,
+        status: str,
+        confirmed: bool,
+        applied_at: str,
+    ) -> None:
+        await self._ensure_initialized()
+        aiosqlite = self._import_aiosqlite()
+        async with aiosqlite.connect(self._db_path) as connection:
+            await connection.execute(
+                """
+                INSERT INTO applications (
+                    correlation_id,
+                    status,
+                    confirmed,
+                    applied_at,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(correlation_id) DO UPDATE SET
+                    status = excluded.status,
+                    confirmed = excluded.confirmed,
+                    applied_at = excluded.applied_at,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    correlation_id,
+                    status,
+                    int(confirmed),
+                    applied_at,
+                ),
+            )
+            await connection.commit()
+
+    async def finalize_application_projection(
+        self,
+        correlation_id: str,
+        *,
+        final_score: float,
+        resume_path: str,
+        pdf_path: str,
+    ) -> None:
+        await self._ensure_initialized()
+        aiosqlite = self._import_aiosqlite()
+        async with aiosqlite.connect(self._db_path) as connection:
+            await connection.execute(
+                """
+                INSERT INTO applications (
+                    correlation_id,
+                    final_score,
+                    resume_path,
+                    pdf_path,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(correlation_id) DO UPDATE SET
+                    final_score = excluded.final_score,
+                    resume_path = CASE
+                        WHEN excluded.resume_path = '' THEN applications.resume_path
+                        ELSE excluded.resume_path
+                    END,
+                    pdf_path = CASE
+                        WHEN excluded.pdf_path = '' THEN applications.pdf_path
+                        ELSE excluded.pdf_path
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    correlation_id,
+                    float(final_score),
+                    resume_path,
+                    pdf_path,
+                ),
+            )
+            await connection.commit()
+
     async def _ensure_initialized(self) -> None:
         await super()._ensure_initialized()
         if self._domain_initialized:

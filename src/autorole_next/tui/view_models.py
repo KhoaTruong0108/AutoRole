@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from ..stage_ids import FIELD_COMPLETER, FORM_SCRAPER, PACKAGING, SCORING, STAGE_ALIASES, TAILORING
+from ..stage_ids import CONCLUDING, FIELD_COMPLETER, FORM_SCRAPER, FORM_SUBMISSION, PACKAGING, SCORING, SESSION, STAGE_ALIASES, TAILORING
 
 
 STAGE_LABELS = {
     SCORING: "Scoring",
     TAILORING: "Tailoring",
     PACKAGING: "Packaging",
+    SESSION: "Session",
     FORM_SCRAPER: "Form Scraper",
     FIELD_COMPLETER: "Field Completer",
+    FORM_SUBMISSION: "Form Submission",
+    CONCLUDING: "Concluding",
 }
 
 

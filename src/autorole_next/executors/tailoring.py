@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from .._snapflow import Executor, StageResult, StateContext
@@ -25,6 +26,12 @@ class TailoringExecutor(Executor[dict[str, Any]]):
         attempt = int(scoring.get("attempt", int(ctx.attempt) + 1))
         degree = self._select_degree(overall)
         resume_path = f"resumes/{ctx.correlation_id}/tailored_v{attempt}.md"
+        self._materialize_tailored_resume(
+            resume_path,
+            correlation_id=ctx.correlation_id,
+            attempt=attempt,
+            degree=degree,
+        )
 
         tailoring_payload = {
             "tailoring_degree": degree,
@@ -49,8 +56,33 @@ class TailoringExecutor(Executor[dict[str, Any]]):
         return StageResult.ok(payload)
 
     @staticmethod
+    def _materialize_tailored_resume(
+        resume_path: str,
+        *,
+        correlation_id: str,
+        attempt: int,
+        degree: int,
+    ) -> None:
+        target = Path(resume_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            return
+        target.write_text(
+            "\n".join(
+                [
+                    f"# Tailored Resume ({correlation_id})",
+                    "",
+                    f"- attempt: {attempt}",
+                    f"- tailoring_degree: {degree}",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    @staticmethod
     def _select_degree(score: float) -> int:
-        if score >= 0.85:
+        if score >= 0.55:
             return 0
         if score >= 0.50:
             return 1

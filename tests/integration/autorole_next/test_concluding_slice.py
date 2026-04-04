@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from autorole_next.payloads import ExplorationInput, ListingPayload, ListingSeed
 from autorole_next.seeders.exploring import ExploringSeeder
 
 
-def _seed(job_id: str = "tailor-1") -> ListingSeed:
+def _seed(job_id: str = "concluding-1") -> ListingSeed:
     return ListingSeed(
         listing=ListingPayload(
             job_url=f"https://example.com/jobs/{job_id}",
@@ -39,13 +40,13 @@ async def _wait_for_terminal_status(store, correlation_id: str, timeout_seconds:
 
 
 @pytest.mark.asyncio
-async def test_tailoring_slice_persists_tailored_resumes_for_looping_run(tmp_path) -> None:
+async def test_concluding_slice_finalizes_application_projection_and_artifact(tmp_path) -> None:
     db_path = str(tmp_path / "autorole-next.db")
     runner = build_runner(db_path)
     store = build_store(db_path)
 
     async def discover(_filters: dict[str, object]) -> list[ListingSeed]:
-        return [_seed("tailoring-loop")]
+        return [_seed("concluding")]
 
     seeder = ExploringSeeder(runner, store, search_discovery=discover)
     await runner.start(stage_ids=["scoring", "tailoring", "packaging", "session", "formScraper", "fieldCompleter", "formSubmission", "concluding"])
@@ -53,21 +54,34 @@ async def test_tailoring_slice_persists_tailored_resumes_for_looping_run(tmp_pat
         seeded = await seeder.seed(
             ExplorationInput(
                 search_filters={"platforms": ["mock"]},
-                metadata={"forced_score": 0.35},
+                metadata={"forced_score": 0.93, "apply_mode": "dry_run"},
             )
         )
 
-        status = await _wait_for_terminal_status(store, seeded[0].correlation_id)
-        assert status == RunStatus.BLOCKED
+        correlation_id = seeded[0].correlation_id
+        status = await _wait_for_terminal_status(store, correlation_id)
+        assert status == RunStatus.COMPLETED
+
+        ctx = await store.load_context(correlation_id)
+        assert ctx is not None
+        concluding = dict(ctx.data).get("concluding")
+        assert isinstance(concluding, dict)
+        assert float(concluding.get("final_score", 0.0)) >= 0.9
+        assert str(concluding.get("submission_status", "")) == "dry_run"
 
         with sqlite3.connect(store.path) as db:
-            rows = db.execute(
-                "SELECT attempt, resume_path, tailoring_degree FROM tailored_resumes WHERE correlation_id = ? ORDER BY attempt ASC",
-                (seeded[0].correlation_id,),
-            ).fetchall()
+            row = db.execute(
+                "SELECT status, final_score, resume_path, pdf_path FROM applications WHERE correlation_id = ?",
+                (correlation_id,),
+            ).fetchone()
 
-        assert [row[0] for row in rows] == [1, 2, 3]
-        assert all(str(row[1]).endswith(".md") for row in rows)
-        assert all(int(row[2]) >= 1 for row in rows)
+        assert row is not None
+        assert row[0] == "dry_run"
+        assert float(row[1]) >= 0.9
+        assert str(row[2]).endswith(".md")
+        assert str(row[3]).endswith(".pdf")
+
+        artifact_path = Path("logs") / "concluding" / correlation_id / "output.json"
+        assert artifact_path.exists()
     finally:
         await runner.shutdown(mode="hard")

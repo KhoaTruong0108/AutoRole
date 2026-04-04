@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from autorole_next.payloads import ExplorationInput, ListingPayload, ListingSeed
 from autorole_next.seeders.exploring import ExploringSeeder
 
 
-def _seed(job_id: str = "tailor-1") -> ListingSeed:
+def _seed(job_id: str = "pkg-session-1") -> ListingSeed:
     return ListingSeed(
         listing=ListingPayload(
             job_url=f"https://example.com/jobs/{job_id}",
@@ -39,13 +40,13 @@ async def _wait_for_terminal_status(store, correlation_id: str, timeout_seconds:
 
 
 @pytest.mark.asyncio
-async def test_tailoring_slice_persists_tailored_resumes_for_looping_run(tmp_path) -> None:
+async def test_packaging_and_session_slice_persists_projection_rows(tmp_path) -> None:
     db_path = str(tmp_path / "autorole-next.db")
     runner = build_runner(db_path)
     store = build_store(db_path)
 
     async def discover(_filters: dict[str, object]) -> list[ListingSeed]:
-        return [_seed("tailoring-loop")]
+        return [_seed("packaging-session")]
 
     seeder = ExploringSeeder(runner, store, search_discovery=discover)
     await runner.start(stage_ids=["scoring", "tailoring", "packaging", "session", "formScraper", "fieldCompleter", "formSubmission", "concluding"])
@@ -53,21 +54,33 @@ async def test_tailoring_slice_persists_tailored_resumes_for_looping_run(tmp_pat
         seeded = await seeder.seed(
             ExplorationInput(
                 search_filters={"platforms": ["mock"]},
-                metadata={"forced_score": 0.35},
+                metadata={"forced_score": 0.93},
             )
         )
 
-        status = await _wait_for_terminal_status(store, seeded[0].correlation_id)
-        assert status == RunStatus.BLOCKED
+        correlation_id = seeded[0].correlation_id
+        status = await _wait_for_terminal_status(store, correlation_id)
+        assert status == RunStatus.COMPLETED
 
         with sqlite3.connect(store.path) as db:
-            rows = db.execute(
-                "SELECT attempt, resume_path, tailoring_degree FROM tailored_resumes WHERE correlation_id = ? ORDER BY attempt ASC",
-                (seeded[0].correlation_id,),
-            ).fetchall()
+            app_row = db.execute(
+                "SELECT status, resume_path, pdf_path FROM applications WHERE correlation_id = ?",
+                (correlation_id,),
+            ).fetchone()
+            session_row = db.execute(
+                "SELECT platform, authenticated, session_note FROM sessions WHERE correlation_id = ?",
+                (correlation_id,),
+            ).fetchone()
 
-        assert [row[0] for row in rows] == [1, 2, 3]
-        assert all(str(row[1]).endswith(".md") for row in rows)
-        assert all(int(row[2]) >= 1 for row in rows)
+        assert app_row is not None
+        assert app_row[0] == "dry_run"
+        assert str(app_row[1]).endswith(".md")
+        assert str(app_row[2]).endswith(".pdf")
+        assert Path(str(app_row[2])).exists()
+
+        assert session_row is not None
+        assert session_row[0] == "workday"
+        assert int(session_row[1]) == 0
+        assert "public platform" in str(session_row[2]).lower()
     finally:
         await runner.shutdown(mode="hard")
