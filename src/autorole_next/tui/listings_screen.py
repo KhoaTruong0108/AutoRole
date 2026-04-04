@@ -6,6 +6,20 @@ from .listings_provider import SQLiteListingsProvider
 from .view_models import resolve_stage_label
 
 
+MAX_DETAIL_CHARS = 20_000
+
+
+def _format_detail_payload(payload: dict[str, object]) -> str:
+    rendered = orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8")
+    if len(rendered) <= MAX_DETAIL_CHARS:
+        return rendered
+    return (
+        rendered[:MAX_DETAIL_CHARS]
+        + "\n\n... detail truncated to "
+        + f"{MAX_DETAIL_CHARS} chars (full payload is {len(rendered)} chars)."
+    )
+
+
 def listings_content(provider: SQLiteListingsProvider):
     try:
         from textual.containers import Vertical, VerticalScroll
@@ -23,7 +37,7 @@ def listings_content(provider: SQLiteListingsProvider):
             yield Checkbox("Auto-refresh", value=True, id="listings-auto-refresh")
             yield DataTable(id="listings-table")
             with VerticalScroll(id="listings-details-scroll"):
-                yield Static("Select a listing to inspect details", id="listings-details")
+                yield Static("Select a listing to inspect details", id="listings-details", markup=False)
 
         async def on_mount(self) -> None:
             table = self.query_one("#listings-table", DataTable)
@@ -91,6 +105,6 @@ def listings_content(provider: SQLiteListingsProvider):
                 details.update("Listing not found")
                 return
 
-            details.update(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+            details.update(_format_detail_payload(payload))
 
     return ListingsWidget()

@@ -76,7 +76,7 @@ def _manual_listing_seed(
     slug = _slug_from_job_url(job_url)
     listing = ListingPayload(
         job_url=job_url,
-        apply_url=f"{job_url.rstrip('/')}/apply",
+        apply_url=job_url, #f"{job_url.rstrip('/')}/apply",
         company_name=_infer_company_name(job_url, company_name),
         external_job_id=slug,
         job_title=_infer_job_title(job_url, job_title),
