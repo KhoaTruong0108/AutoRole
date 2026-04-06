@@ -51,6 +51,18 @@ def create_tui_app():
             overflow-x: auto;
             overflow-y: auto;
         }
+
+        #applications-controls {
+            height: 3;
+            margin: 0;
+            padding: 0;
+        }
+
+        #applications-filter,
+        #applications-auto-refresh,
+        #applications-export {
+            margin: 0;
+        }
         """
 
         def compose(self):

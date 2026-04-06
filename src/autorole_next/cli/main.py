@@ -13,6 +13,7 @@ from autorole_next.app import build_runner, build_store
 from autorole_next._snapflow import RunStatus
 from autorole_next.payloads import ExplorationInput, ListingPayload, ListingSeed
 from autorole_next.seeders.exploring import ExploringSeeder
+from autorole_next.stage_ids import canonical_stage_id
 from autorole_next.tui.run import launch_tui
 
 app = typer.Typer(help="AutoRole Next command line interface")
@@ -126,11 +127,12 @@ async def _run_seed_command(
 
 
 async def _count_running_for_stage(store: Any, stage: str) -> int:
+    stage = canonical_stage_id(stage)
     running = await store.list_runs(status=RunStatus.RUNNING, limit=1000, offset=0)
     count = 0
     for run in running:
         ctx = await store.load_context(run.correlation_id)
-        if ctx is not None and ctx.current_stage == stage:
+        if ctx is not None and canonical_stage_id(ctx.current_stage) == stage:
             count += 1
     return count
 
@@ -144,6 +146,7 @@ async def _run_stage_worker(
     idle_rounds: int,
     max_seconds: int,
 ) -> dict[str, Any]:
+    stage = canonical_stage_id(stage)
     runner = build_runner(db_path)
     store = build_store(db_path)
 

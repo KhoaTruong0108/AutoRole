@@ -11,6 +11,7 @@ import orjson
 from ._snapflow import SQLiteStoreAdapter
 from .payloads import ListingSeed, canonical_listing_key
 from .schema import DOMAIN_SCHEMA_SQL, DOMAIN_TABLES
+from .stage_ids import STAGE_ALIASES
 
 RUNTIME_REQUIRED_TABLES = {
     "pipeline_runs",
@@ -422,9 +423,25 @@ class AutoRoleStoreAdapter(SQLiteStoreAdapter):
             aiosqlite = self._import_aiosqlite()
             async with aiosqlite.connect(self._db_path) as connection:
                 await connection.executescript(DOMAIN_SCHEMA_SQL)
+                await self._normalize_stage_names(connection)
                 await connection.commit()
 
             self._domain_initialized = True
+
+    async def _normalize_stage_names(self, connection: Any) -> None:
+        for alias, canonical in STAGE_ALIASES.items():
+            await connection.execute(
+                "UPDATE pipeline_contexts SET current_stage = ? WHERE current_stage = ?",
+                (canonical, alias),
+            )
+            await connection.execute(
+                "UPDATE queue_messages SET queue_name = ? WHERE queue_name = ?",
+                (canonical, alias),
+            )
+            await connection.execute(
+                "UPDATE dlq_messages SET stage_name = ? WHERE stage_name = ?",
+                (canonical, alias),
+            )
 
     def _validate_runtime_schema(self, connection: sqlite3.Connection) -> list[str]:
         issues: list[str] = []

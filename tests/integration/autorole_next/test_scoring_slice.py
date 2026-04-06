@@ -79,7 +79,12 @@ async def test_scoring_slice_blocks_after_loop_attempts(tmp_path) -> None:
     seeder = ExploringSeeder(runner, store, search_discovery=discover)
     await runner.start(stage_ids=["scoring", "tailoring", "packaging", "session", "formScraper", "fieldCompleter", "formSubmission", "concluding"])
     try:
-        seeded = await seeder.seed(ExplorationInput(search_filters={"platforms": ["mock"]}, metadata={"forced_score": 0.35}))
+        seeded = await seeder.seed(
+            ExplorationInput(
+                search_filters={"platforms": ["mock"]},
+                metadata={"forced_score": 0.35, "tailoring_use_llm": False},
+            )
+        )
         status = await _wait_for_terminal_status(store, seeded[0].correlation_id)
         assert status == RunStatus.BLOCKED
 

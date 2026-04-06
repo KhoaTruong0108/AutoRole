@@ -1,3 +1,4 @@
+from .llm_applying import LlmApplyingExecutor
 from .concluding import ConcludingExecutor
 from .field_completer import FieldCompleterExecutor
 from .form_scraper import FormScraperExecutor
@@ -15,5 +16,6 @@ __all__ = [
 	"FormScraperExecutor",
 	"FieldCompleterExecutor",
 	"FormSubmissionExecutor",
+	"LlmApplyingExecutor",
 	"ConcludingExecutor",
 ]

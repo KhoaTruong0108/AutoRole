@@ -55,7 +55,7 @@ class TailoringGate(Gate):
                 category=ErrorCategory.VALIDATION,
             )
 
-        candidate = data.get("scoring") or data.get("score")
+        candidate = data.get("scoring")
         if not isinstance(candidate, dict):
             raise BlockedError(
                 reason="Tailoring gate missing scoring payload",

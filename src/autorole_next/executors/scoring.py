@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from autorole_next.config import AppConfig, ScoringConfig
+
 from .._snapflow import Executor, StageResult, StateContext
+from ..scoring.strategies import get_scoring_strategy, split_matched
 from ..store import AutoRoleStoreAdapter
 
 
@@ -20,9 +23,13 @@ class ScoringExecutor(Executor[dict[str, Any]]):
 
     async def execute(self, ctx: StateContext[dict[str, Any]]) -> StageResult[dict[str, Any]]:
         payload = dict(ctx.data)
-        score_payload = self._build_score_payload(payload, ctx.metadata)
+        try:
+            score_payload = await self._build_score_payload(payload, ctx.metadata)
+        except ValueError as exc:
+            return StageResult.fail(str(exc), "ValidationError")
+        except Exception as exc:
+            return StageResult.fail(str(exc), exc.__class__.__name__)
         payload["scoring"] = score_payload
-        payload["score"] = score_payload
 
         store = self._store
         if store is None:
@@ -40,7 +47,8 @@ class ScoringExecutor(Executor[dict[str, Any]]):
         return StageResult.ok(payload)
 
     @staticmethod
-    def _build_score_payload(payload: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+    async def _build_score_payload(payload: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+        app_config = AppConfig()
         previous_attempt = 0
         previous_scoring = payload.get("scoring")
         if isinstance(previous_scoring, dict):
@@ -51,28 +59,54 @@ class ScoringExecutor(Executor[dict[str, Any]]):
         forced = metadata.get("forced_score")
         if isinstance(forced, (int, float)):
             overall = float(max(0.0, min(1.0, forced)))
-        else:
-            listing = payload.get("listing") if isinstance(payload.get("listing"), dict) else {}
-            title = str(listing.get("job_title", ""))
-            company = str(listing.get("company_name", ""))
-            platform = str(listing.get("platform", ""))
-            signal = len(title) + len(company) + len(platform)
-            overall = min(1.0, 0.35 + (signal % 40) / 100.0)
+            criteria_scores = {
+                "technical_skills": overall,
+                "experience_depth": overall,
+                "seniority_alignment": overall,
+                "domain_relevance": overall,
+                "culture_fit": overall,
+            }
+            matched, mismatched = split_matched(criteria_scores)
+            return {
+                "attempt": previous_attempt + 1,
+                "strategy": "forced",
+                "overall_score": round(overall, 4),
+                "criteria_scores": criteria_scores,
+                "matched": matched,
+                "mismatched": mismatched,
+                "jd_summary": f"Scored at {_utcnow_iso()}",
+            }
 
-        criteria_scores = {
-            "technical_skills": max(0.0, min(1.0, overall + 0.03)),
-            "experience_depth": max(0.0, min(1.0, overall + 0.01)),
-            "seniority_alignment": max(0.0, min(1.0, overall - 0.02)),
-            "domain_relevance": max(0.0, min(1.0, overall + 0.02)),
-            "culture_fit": max(0.0, min(1.0, overall - 0.01)),
-        }
-        matched = [name for name, value in criteria_scores.items() if value >= 0.7]
-        mismatched = [name for name, value in criteria_scores.items() if value < 0.7]
+        scoring_config = _resolve_scoring_config(metadata, app_config)
+        strategy_name = _resolve_scoring_strategy(metadata, scoring_config)
+        strategy = get_scoring_strategy(strategy_name)
+        strategy_payload = await strategy.score(
+            payload=payload,
+            metadata=metadata,
+            config=scoring_config,
+            app_config=app_config,
+        )
         return {
+            **strategy_payload,
             "attempt": previous_attempt + 1,
-            "overall_score": round(overall, 4),
-            "criteria_scores": criteria_scores,
-            "matched": matched,
-            "mismatched": mismatched,
-            "jd_summary": f"Scored at {_utcnow_iso()}",
+            "scored_at": _utcnow_iso(),
         }
+
+
+def _resolve_scoring_config(metadata: dict[str, Any], app_config: AppConfig) -> ScoringConfig:
+    scoring_override = metadata.get("scoring_config")
+    if isinstance(scoring_override, ScoringConfig):
+        return scoring_override
+    if isinstance(scoring_override, dict):
+        try:
+            return ScoringConfig.model_validate(scoring_override)
+        except Exception:
+            return app_config.scoring
+    return app_config.scoring
+
+
+def _resolve_scoring_strategy(metadata: dict[str, Any], config: ScoringConfig) -> str:
+    strategy_override = metadata.get("scoring_strategy")
+    if isinstance(strategy_override, str) and strategy_override.strip():
+        return strategy_override.strip().lower()
+    return str(config.strategy).strip().lower()

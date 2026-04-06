@@ -53,7 +53,7 @@ async def test_tailoring_slice_persists_tailored_resumes_for_looping_run(tmp_pat
         seeded = await seeder.seed(
             ExplorationInput(
                 search_filters={"platforms": ["mock"]},
-                metadata={"forced_score": 0.35},
+                metadata={"forced_score": 0.35, "tailoring_use_llm": False},
             )
         )
 

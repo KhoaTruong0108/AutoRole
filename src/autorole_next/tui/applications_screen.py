@@ -6,20 +6,6 @@ from .applications_provider import SQLiteApplicationsProvider
 from .view_models import resolve_stage_label
 
 
-MAX_DETAIL_CHARS = 200_000
-
-
-def _format_detail_payload(payload: dict[str, object]) -> str:
-    rendered = orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8")
-    if len(rendered) <= MAX_DETAIL_CHARS:
-        return rendered
-    return (
-        rendered[:MAX_DETAIL_CHARS]
-        + "\n\n... detail truncated to "
-        + f"{MAX_DETAIL_CHARS} chars (full payload is {len(rendered)} chars)."
-    )
-
-
 def applications_content(provider: SQLiteApplicationsProvider):
     try:
         from textual.containers import Vertical, VerticalScroll
@@ -37,11 +23,7 @@ def applications_content(provider: SQLiteApplicationsProvider):
             yield Checkbox("Auto-refresh", value=True, id="applications-auto-refresh")
             yield DataTable(id="applications-table")
             with VerticalScroll(id="applications-details-scroll"):
-                yield Static(
-                    "Select an application context row to inspect details",
-                    id="applications-details",
-                    markup=False,
-                )
+                yield Static("Select an application context row to inspect details", id="applications-details")
 
         async def on_mount(self) -> None:
             table = self.query_one("#applications-table", DataTable)
@@ -107,6 +89,6 @@ def applications_content(provider: SQLiteApplicationsProvider):
                 details.update("Application context not found")
                 return
 
-            details.update(_format_detail_payload(payload))
+            details.update(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
     return ApplicationsWidget()

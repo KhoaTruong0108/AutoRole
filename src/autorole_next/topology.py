@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .executors.llm_applying import LlmApplyingExecutor
 from ._snapflow import SQLiteQueueAdapter, StageNode, Topology
 from .executors.concluding import ConcludingExecutor
 from .executors.field_completer import FieldCompleterExecutor
@@ -12,11 +13,12 @@ from .executors.tailoring import TailoringExecutor
 from .gates.field_completer import FieldCompleterGate
 from .gates.form_scraper import FormScraperGate
 from .gates.form_submission import FormSubmissionGate
+from .gates.llm_applying import LlmApplyingGate
 from .gates.packaging import PackagingGate
 from .gates.scoring import ScoringGate
 from .gates.session import SessionGate
 from .gates.tailoring import TailoringGate
-from .stage_ids import CONCLUDING, FIELD_COMPLETER, FORM_SCRAPER, FORM_SUBMISSION, PACKAGING, SCORING, SESSION, TAILORING
+from .stage_ids import CONCLUDING, FIELD_COMPLETER, FORM_SCRAPER, FORM_SUBMISSION, LLM_APPLYING, PACKAGING, SCORING, SESSION, TAILORING
 from .store import AutoRoleStoreAdapter
 
 
@@ -26,6 +28,7 @@ def build_topology(store: AutoRoleStoreAdapter) -> Topology:
     PackagingExecutor.configure_store(store)
     SessionExecutor.configure_store(store)
     FormSubmissionExecutor.configure_store(store)
+    LlmApplyingExecutor.configure_store(store)
     ConcludingExecutor.configure_store(store)
     return Topology(
         stages=[
@@ -63,6 +66,11 @@ def build_topology(store: AutoRoleStoreAdapter) -> Topology:
                 id=FORM_SUBMISSION,
                 executor=FormSubmissionExecutor,
                 gate=FormSubmissionGate(),
+            ),
+            StageNode(
+                id=LLM_APPLYING,
+                executor=LlmApplyingExecutor,
+                gate=LlmApplyingGate(),
             ),
             StageNode(
                 id=CONCLUDING,

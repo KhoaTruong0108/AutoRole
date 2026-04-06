@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from ..stage_ids import CONCLUDING, FIELD_COMPLETER, FORM_SCRAPER, FORM_SUBMISSION, PACKAGING, SCORING, SESSION, STAGE_ALIASES, TAILORING
+from ..stage_ids import (
+    CONCLUDING,
+    FIELD_COMPLETER,
+    FORM_SCRAPER,
+    FORM_SUBMISSION,
+    LLM_APPLYING,
+    PACKAGING,
+    SCORING,
+    SESSION,
+    TAILORING,
+    canonical_stage_id,
+)
 
 
 STAGE_LABELS = {
@@ -11,10 +22,11 @@ STAGE_LABELS = {
     FORM_SCRAPER: "Form Scraper",
     FIELD_COMPLETER: "Field Completer",
     FORM_SUBMISSION: "Form Submission",
+    LLM_APPLYING: "LLM Applying",
     CONCLUDING: "Concluding",
 }
 
 
 def resolve_stage_label(stage_id: str) -> str:
-    canonical_stage_id = STAGE_ALIASES.get(stage_id, stage_id)
-    return STAGE_LABELS.get(canonical_stage_id, canonical_stage_id.replace("_", " ").title())
+    normalized_stage_id = canonical_stage_id(stage_id)
+    return STAGE_LABELS.get(normalized_stage_id, normalized_stage_id.replace("_", " ").title())

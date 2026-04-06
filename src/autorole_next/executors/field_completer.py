@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from autorole.config import AppConfig
-from autorole.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
+from autorole_next.config import AppConfig
+from autorole_next.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
 
 from .._snapflow import Executor, StageResult, StateContext
 from ..form_controls.exceptions import MappingError

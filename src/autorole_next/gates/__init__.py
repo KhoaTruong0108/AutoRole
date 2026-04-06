@@ -1,3 +1,4 @@
+from .applying import ApplyingGate
 from .field_completer import FieldCompleterGate
 from .form_scraper import FormScraperGate
 from .form_submission import FormSubmissionGate
@@ -14,4 +15,5 @@ __all__ = [
 	"FormScraperGate",
 	"FieldCompleterGate",
 	"FormSubmissionGate",
+	"ApplyingGate",
 ]

@@ -20,7 +20,7 @@ class ScoringGate(Gate):
                 category=ErrorCategory.VALIDATION,
             )
 
-        candidate = data.get("scoring") or data.get("score")
+        candidate = data.get("scoring")
         if not isinstance(candidate, dict):
             raise BlockedError(
                 reason="Scoring gate missing scoring payload",
