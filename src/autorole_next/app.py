@@ -25,10 +25,14 @@ def build_store(config_or_db_path: Any) -> AutoRoleStoreAdapter:
     return AutoRoleStoreAdapter(_resolve_db_path(config_or_db_path))
 
 
-def build_runner(config_or_db_path: Any) -> PipelineRunner:
+def build_runner(
+    config_or_db_path: Any,
+    default_stage_timeout_ms: int = 60_000,
+    stage_timeout_ms: dict[str, int] | None = None,
+) -> PipelineRunner:
     store = build_store(config_or_db_path)
-    topology = build_topology(store)
-    return PipelineRunner(topology)
+    topology = build_topology(store, stage_timeout_ms=stage_timeout_ms)
+    return PipelineRunner(topology, default_stage_timeout_ms=default_stage_timeout_ms)
 
 
 __all__ = ["build_runner", "build_store", "build_topology"]

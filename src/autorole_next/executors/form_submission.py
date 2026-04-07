@@ -41,7 +41,9 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
         if completion_payload is None and isinstance(payload.get("llm_field_completer"), dict):
             completion_payload = dict(payload.get("llm_field_completer"))
         form_session = payload.get("form_session") if isinstance(payload.get("form_session"), dict) else None
-        packaged = payload.get("packaged") if isinstance(payload.get("packaged"), dict) else None
+        packaged = payload.get("packaging") if isinstance(payload.get("packaging"), dict) else None
+        if packaged is None and isinstance(payload.get("packaged"), dict):
+            packaged = dict(payload.get("packaged"))
 
         if (
             listing is None
@@ -53,7 +55,7 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
             return StageResult.fail(
                 (
                     "FormSubmissionExecutor: listing, form payload, completion payload, "
-                    "form_session and packaged must be set"
+                    "form_session and packaging must be set"
                 ),
                 "PreconditionError",
             )

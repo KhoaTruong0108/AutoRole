@@ -13,12 +13,17 @@ from autorole_next.app import build_runner, build_store
 from autorole_next._snapflow import RunStatus
 from autorole_next.payloads import ExplorationInput, ListingPayload, ListingSeed
 from autorole_next.seeders.exploring import ExploringSeeder
-from autorole_next.stage_ids import canonical_stage_id
+from autorole_next.stage_ids import LLM_APPLYING, canonical_stage_id
 from autorole_next.tui.run import launch_tui
 
 app = typer.Typer(help="AutoRole Next command line interface")
 run_app = typer.Typer(help="Seed and run autorole_next workflows")
 app.add_typer(run_app, name="run")
+
+DEFAULT_STAGE_MAX_SECONDS = 300
+LONG_RUNNING_STAGE_MAX_SECONDS = {
+    LLM_APPLYING: 900,
+}
 
 
 def _slug_from_job_url(job_url: str) -> str:
@@ -63,6 +68,17 @@ def _load_metadata(metadata_json: str) -> dict[str, Any]:
     if not isinstance(decoded, dict):
         raise typer.BadParameter("--metadata-json must decode to a JSON object")
     return decoded
+
+
+def _default_max_seconds_for_stage(stage: str) -> int:
+    canonical_stage = canonical_stage_id(stage)
+    return LONG_RUNNING_STAGE_MAX_SECONDS.get(canonical_stage, DEFAULT_STAGE_MAX_SECONDS)
+
+
+def _resolve_stage_max_seconds(stage: str, max_seconds: int | None) -> int:
+    if max_seconds is None:
+        return _default_max_seconds_for_stage(stage)
+    return max_seconds
 
 
 def _manual_listing_seed(
@@ -144,10 +160,13 @@ async def _run_stage_worker(
     watch: bool,
     poll_seconds: float,
     idle_rounds: int,
-    max_seconds: int,
+    max_seconds: int | None,
 ) -> dict[str, Any]:
     stage = canonical_stage_id(stage)
-    runner = build_runner(db_path)
+    effective_max_seconds = _resolve_stage_max_seconds(stage, max_seconds)
+    default_timeout_ms = DEFAULT_STAGE_MAX_SECONDS * 1000
+    stage_timeout_ms = {s: ms * 1000 for s, ms in LONG_RUNNING_STAGE_MAX_SECONDS.items()}
+    runner = build_runner(db_path, default_stage_timeout_ms=default_timeout_ms, stage_timeout_ms=stage_timeout_ms)
     store = build_store(db_path)
 
     await runner.start(stage_ids=[stage])
@@ -173,7 +192,7 @@ async def _run_stage_worker(
                         "elapsed_seconds": round(time.monotonic() - started_at, 3),
                     }
 
-                if max_seconds > 0 and (time.monotonic() - started_at) >= max_seconds:
+                if effective_max_seconds > 0 and (time.monotonic() - started_at) >= effective_max_seconds:
                     return {
                         "stage": stage,
                         "status": "timeout",
@@ -226,9 +245,13 @@ def run_stage(
     stage: str = typer.Option("scoring", "--stage", help="Stage id to run independently."),
     db: str = typer.Option("tmp/autorole-next.db", "--db", help="SQLite database path."),
     watch: bool = typer.Option(False, "--watch", help="Keep worker alive until interrupted."),
-    poll_seconds: float = typer.Option(0.2, "--poll-seconds", help="Polling interval while observing queue drain."),
+    poll_seconds: float = typer.Option(1, "--poll-seconds", help="Polling interval while observing queue drain."),
     idle_rounds: int = typer.Option(5, "--idle-rounds", help="Consecutive idle checks before considering stage drained."),
-    max_seconds: int = typer.Option(120, "--max-seconds", help="Maximum seconds to wait before returning timeout in non-watch mode."),
+    max_seconds: int | None = typer.Option(
+        None,
+        "--max-seconds",
+        help="Maximum seconds to wait before returning timeout in non-watch mode. Defaults to 120s, or 900s for llm_applying. Use 0 to disable.",
+    ),
 ) -> None:
     result = asyncio.run(
         _run_stage_worker(

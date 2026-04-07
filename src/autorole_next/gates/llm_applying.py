@@ -10,3 +10,6 @@ class LlmApplyingGate(Gate):
     def evaluate(self, ctx: StateContext[Any]) -> str | None:
         _ = ctx
         return CONCLUDING
+
+
+ApplyingGate = LlmApplyingGate

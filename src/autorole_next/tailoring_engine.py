@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from autorole_next.config import TailoringConfig
+from autorole_next.config import AppConfig, TailoringConfig
+from autorole_next.form_controls.profile import load_profile
 
 
 def utcnow_iso() -> str:
@@ -75,6 +76,10 @@ def resolve_source_resume(payload: dict[str, Any], metadata: dict[str, Any]) -> 
         if content:
             return content, parent_resume_id, version
 
+    resume_text = metadata.get("resume_text")
+    if isinstance(resume_text, str) and resume_text.strip():
+        return resume_text.strip() + "\n", parent_resume_id, version
+
     for fallback in (
         Path("resumes/master.md"),
         Path("~/.autorole/resumes/master.md").expanduser(),
@@ -91,8 +96,18 @@ def resolve_source_resume(payload: dict[str, Any], metadata: dict[str, Any]) -> 
     )
 
 
-def build_resume_path(correlation_id: str, version: int) -> str:
-    return f"resumes/{correlation_id}/tailored_v{version}.md"
+def build_resume_path(correlation_id: str, version: int, metadata: dict[str, Any] | None = None) -> str:
+    first_name, last_name = _resolve_candidate_name({} if metadata is None else metadata)
+    return f"resumes/{correlation_id}/{first_name}_{last_name}_resume_{version}.md"
+
+
+def build_packaged_pdf_path(resume_path: str) -> str:
+    path = Path(resume_path)
+    stem = path.stem
+    match = re.match(r"(?P<base>.+_resume)_\d+$", stem)
+    if match:
+        stem = match.group("base")
+    return str(path.with_name(f"{stem}.pdf"))
 
 
 def tailor_resume(
@@ -207,7 +222,7 @@ def _infer_criterion(text: str, jd_breakdown: dict[str, Any]) -> str:
 
 def _next_version(path: Path) -> int:
     name = path.name
-    match = re.search(r"_v(\d+)\.md$", name)
+    match = re.search(r"_(\d+)\.md$", name)
     if match:
         return int(match.group(1)) + 1
     return 2
@@ -220,3 +235,50 @@ def _read_if_exists(path: Path) -> str:
     except Exception:
         return ""
     return ""
+
+
+def _resolve_candidate_name(metadata: dict[str, Any]) -> tuple[str, str]:
+    personal = metadata.get("personal") if isinstance(metadata.get("personal"), dict) else {}
+    first_name = _sanitize_name_token(personal.get("first_name") or metadata.get("first_name"))
+    last_name = _sanitize_name_token(personal.get("last_name") or metadata.get("last_name"))
+
+    if not first_name or not last_name:
+        full_name = str(personal.get("full_name") or personal.get("name") or metadata.get("full_name") or "").strip()
+        if full_name:
+            parts = [_sanitize_name_token(part) for part in full_name.split() if _sanitize_name_token(part)]
+            if parts and not first_name:
+                first_name = parts[0]
+            if len(parts) > 1 and not last_name:
+                last_name = parts[-1]
+
+    if not first_name or not last_name:
+        profile_personal = _load_profile_personal(metadata)
+        first_name = first_name or _sanitize_name_token(profile_personal.get("first_name"))
+        last_name = last_name or _sanitize_name_token(profile_personal.get("last_name"))
+        if (not first_name or not last_name) and profile_personal:
+            full_name = str(profile_personal.get("full_name") or profile_personal.get("name") or "").strip()
+            if full_name:
+                parts = [_sanitize_name_token(part) for part in full_name.split() if _sanitize_name_token(part)]
+                if parts and not first_name:
+                    first_name = parts[0]
+                if len(parts) > 1 and not last_name:
+                    last_name = parts[-1]
+
+    return first_name or "Candidate", last_name or "User"
+
+
+def _load_profile_personal(metadata: dict[str, Any]) -> dict[str, Any]:
+    configured = str(metadata.get("profile_path") or (Path(AppConfig().base_dir).expanduser() / "user_profile.json"))
+    profile_path = Path(configured).expanduser()
+    try:
+        if profile_path.exists() and profile_path.is_file():
+            profile = load_profile(profile_path)
+            return profile.personal if isinstance(profile.personal, dict) else {}
+    except Exception:
+        return {}
+    return {}
+
+
+def _sanitize_name_token(value: Any) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "_", str(value or "").strip()).strip("_")
+    return cleaned or ""

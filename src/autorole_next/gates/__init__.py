@@ -16,4 +16,5 @@ __all__ = [
 	"FieldCompleterGate",
 	"FormSubmissionGate",
 	"ApplyingGate",
+	"LlmApplyingGate",
 ]

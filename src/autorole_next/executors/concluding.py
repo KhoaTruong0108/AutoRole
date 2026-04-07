@@ -26,13 +26,14 @@ class ConcludingExecutor(Executor[dict[str, Any]]):
         scoring = payload.get("scoring") if isinstance(payload.get("scoring"), dict) else {}
         packaging = payload.get("packaging") if isinstance(payload.get("packaging"), dict) else {}
         submission = payload.get("form_submission") if isinstance(payload.get("form_submission"), dict) else {}
+        llm_applying = payload.get("llm_applying") if isinstance(payload.get("llm_applying"), dict) else {}
 
         final_payload = {
             "completed_at": _utcnow_iso(),
             "final_score": float(scoring.get("overall_score", 0.0)),
             "resume_path": str(packaging.get("resume_path", "")),
             "pdf_path": str(packaging.get("pdf_path", "")),
-            "submission_status": str(submission.get("status", "")),
+            "submission_status": str(submission.get("status") or llm_applying.get("status") or ""),
         }
         payload["concluding"] = final_payload
 

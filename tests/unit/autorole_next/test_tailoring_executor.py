@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from autorole_next._snapflow import StateContext
@@ -42,6 +43,23 @@ def _ctx(data: dict[str, object], metadata: dict[str, object] | None = None) -> 
     )
 
 
+def _profile_path(tmp_path: Path) -> Path:
+    profile_path = tmp_path / "user_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "personal": {
+                    "first_name": "Alex",
+                    "last_name": "Nguyen",
+                    "full_name": "Alex Nguyen",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return profile_path
+
+
 def test_tailoring_executor_requires_scoring_payload() -> None:
     store = _FakeStore(calls=[])
     TailoringExecutor.configure_store(store)  # type: ignore[arg-type]
@@ -53,7 +71,7 @@ def test_tailoring_executor_requires_scoring_payload() -> None:
     assert result.error_type == "PreconditionError"
 
 
-def test_tailoring_executor_degree_zero_for_high_score() -> None:
+def test_tailoring_executor_degree_zero_for_high_score(tmp_path: Path) -> None:
     store = _FakeStore(calls=[])
     TailoringExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = TailoringExecutor()
@@ -77,7 +95,10 @@ def test_tailoring_executor_degree_zero_for_high_score() -> None:
                         "jd_breakdown": {"required_skills": ["python", "aws"]},
                     }
                 },
-                metadata={"resume_text": "Senior engineer with Python and AWS experience."},
+                metadata={
+                    "resume_text": "Senior engineer with Python and AWS experience.",
+                    "profile_path": str(_profile_path(tmp_path)),
+                },
             )
         )
     )
@@ -86,11 +107,14 @@ def test_tailoring_executor_degree_zero_for_high_score() -> None:
     output = dict(result.data)
     tailoring = output.get("tailoring")
     assert isinstance(tailoring, dict)
+    assert "tailored" not in output
     assert int(tailoring["tailoring_degree"]) == 0
+    assert tailoring.get("resume_path") == "resumes/tailor-corr-1/Alex_Nguyen_resume_1.md"
+    assert Path(str(tailoring.get("resume_path"))).read_text(encoding="utf-8") == "Senior engineer with Python and AWS experience.\n"
     assert len(store.calls) == 1
 
 
-def test_tailoring_executor_writes_diff_summary_json() -> None:
+def test_tailoring_executor_writes_diff_summary_json(tmp_path: Path) -> None:
     store = _FakeStore(calls=[])
     TailoringExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = TailoringExecutor()
@@ -115,10 +139,14 @@ def test_tailoring_executor_writes_diff_summary_json() -> None:
                     },
                     "tailoring": {
                         "resume_id": "resume-old",
-                        "resume_path": "resumes/tailor-corr-1/tailored_v1.md",
+                        "resume_path": "resumes/tailor-corr-1/Alex_Nguyen_resume_1.md",
                     },
                 },
-                metadata={"resume_text": "Backend engineer with APIs and SQL.", "tailoring_use_llm": False},
+                metadata={
+                    "resume_text": "Backend engineer with APIs and SQL.",
+                    "tailoring_use_llm": False,
+                    "profile_path": str(_profile_path(tmp_path)),
+                },
             )
         )
     )
@@ -127,7 +155,9 @@ def test_tailoring_executor_writes_diff_summary_json() -> None:
     output = dict(result.data)
     tailoring = output.get("tailoring")
     assert isinstance(tailoring, dict)
+    assert "tailored" not in output
     assert int(tailoring["tailoring_degree"]) >= 1
+    assert tailoring.get("resume_path") == "resumes/tailor-corr-1/Alex_Nguyen_resume_2.md"
 
     parsed = json.loads(str(tailoring["diff_summary"]))
     assert "tailoring_degree" in parsed
@@ -135,7 +165,7 @@ def test_tailoring_executor_writes_diff_summary_json() -> None:
     assert len(store.calls) == 1
 
 
-def test_tailoring_executor_uses_llm_for_non_zero_degree() -> None:
+def test_tailoring_executor_uses_llm_for_non_zero_degree(tmp_path: Path) -> None:
     store = _FakeStore(calls=[])
     TailoringExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = TailoringExecutor()
@@ -163,7 +193,11 @@ def test_tailoring_executor_uses_llm_for_non_zero_degree() -> None:
                             "jd_breakdown": {"required_skills": ["python"]},
                         }
                     },
-                    metadata={"resume_text": "Base resume text.", "tailoring_use_llm": True},
+                    metadata={
+                        "resume_text": "Base resume text.",
+                        "tailoring_use_llm": True,
+                        "profile_path": str(_profile_path(tmp_path)),
+                    },
                 )
             )
         )
@@ -173,10 +207,12 @@ def test_tailoring_executor_uses_llm_for_non_zero_degree() -> None:
     output = dict(result.data)
     tailoring = output.get("tailoring")
     assert isinstance(tailoring, dict)
+    assert "tailored" not in output
     assert int(tailoring["tailoring_degree"]) >= 1
+    assert tailoring.get("resume_path") == "resumes/tailor-corr-1/Alex_Nguyen_resume_1.md"
 
 
-def test_tailoring_executor_escalates_degree_with_attempt() -> None:
+def test_tailoring_executor_escalates_degree_with_attempt(tmp_path: Path) -> None:
     store = _FakeStore(calls=[])
     TailoringExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = TailoringExecutor()
@@ -200,7 +236,11 @@ def test_tailoring_executor_escalates_degree_with_attempt() -> None:
                         "jd_breakdown": {"required_skills": ["python"]},
                     }
                 },
-                metadata={"resume_text": "Senior engineer with Python and AWS experience.", "tailoring_use_llm": False},
+                metadata={
+                    "resume_text": "Senior engineer with Python and AWS experience.",
+                    "tailoring_use_llm": False,
+                    "profile_path": str(_profile_path(tmp_path)),
+                },
             )
         )
     )
@@ -209,5 +249,6 @@ def test_tailoring_executor_escalates_degree_with_attempt() -> None:
     output = dict(result.data)
     tailoring = output.get("tailoring")
     assert isinstance(tailoring, dict)
-    # Base degree for 0.75 is 1, retry attempt=2 should escalate by one level.
-    assert int(tailoring["tailoring_degree"]) == 2
+    assert "tailored" not in output
+    # Base degree for 0.75 is 0 under the current thresholds; retry attempt=2 escalates by one level.
+    assert int(tailoring["tailoring_degree"]) == 1

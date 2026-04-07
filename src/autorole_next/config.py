@@ -58,6 +58,9 @@ class RendererConfig(BaseModel):
 	engine: Literal["pandoc", "weasyprint"] = "weasyprint"
 	pandoc_path: str = "pandoc"
 	template: str = ""
+	font_size_pt: float = 9.5
+	line_height: float = 1.18
+	page_margin_in: float = 0.4
 
 
 class RetentionConfig(BaseModel):

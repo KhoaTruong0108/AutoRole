@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import orjson
-
 from .applications_provider import SQLiteApplicationsProvider
+from .detail_format import format_detail_payload
 from .view_models import resolve_stage_label
 
 
@@ -23,7 +22,11 @@ def applications_content(provider: SQLiteApplicationsProvider):
             yield Checkbox("Auto-refresh", value=True, id="applications-auto-refresh")
             yield DataTable(id="applications-table")
             with VerticalScroll(id="applications-details-scroll"):
-                yield Static("Select an application context row to inspect details", id="applications-details")
+                yield Static(
+                    "Select an application context row to inspect details",
+                    id="applications-details",
+                    markup=False,
+                )
 
         async def on_mount(self) -> None:
             table = self.query_one("#applications-table", DataTable)
@@ -89,6 +92,6 @@ def applications_content(provider: SQLiteApplicationsProvider):
                 details.update("Application context not found")
                 return
 
-            details.update(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+            details.update(format_detail_payload(payload))
 
     return ApplicationsWidget()

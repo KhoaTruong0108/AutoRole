@@ -115,3 +115,87 @@ def test_run_stage_command_processes_pending_scoring_message(tmp_path: Path) -> 
 
     assert queue_depth is not None and int(queue_depth[0]) == 0
     assert score_count is not None and int(score_count[0]) >= 1
+
+
+def test_run_stage_command_uses_longer_default_for_llm_applying(monkeypatch) -> None:
+    runner = CliRunner()
+    seen: dict[str, object] = {}
+
+    async def fake_run_stage_worker(**kwargs):
+        seen.update(kwargs)
+        return {"stage": kwargs["stage"], "status": "drained"}
+
+    monkeypatch.setattr(cli_main_module, "_run_stage_worker", fake_run_stage_worker)
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "stage",
+            "--stage",
+            "llm_applying",
+            "--db",
+            "tmp/manual-seeder.db",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert seen["stage"] == "llm_applying"
+    assert seen["max_seconds"] is None
+    assert cli_main_module._resolve_stage_max_seconds("llm_applying", None) == 900
+
+
+def test_run_stage_command_preserves_explicit_max_seconds(monkeypatch) -> None:
+    runner = CliRunner()
+    seen: dict[str, object] = {}
+
+    async def fake_run_stage_worker(**kwargs):
+        seen.update(kwargs)
+        return {"stage": kwargs["stage"], "status": "drained"}
+
+    monkeypatch.setattr(cli_main_module, "_run_stage_worker", fake_run_stage_worker)
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "stage",
+            "--stage",
+            "llm_applying",
+            "--db",
+            "tmp/manual-seeder.db",
+            "--max-seconds",
+            "30",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert seen["max_seconds"] == 30
+    assert cli_main_module._resolve_stage_max_seconds("llm_applying", 30) == 30
+
+
+def test_run_stage_command_scoring_keeps_short_default(monkeypatch) -> None:
+    runner = CliRunner()
+    seen: dict[str, object] = {}
+
+    async def fake_run_stage_worker(**kwargs):
+        seen.update(kwargs)
+        return {"stage": kwargs["stage"], "status": "drained"}
+
+    monkeypatch.setattr(cli_main_module, "_run_stage_worker", fake_run_stage_worker)
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "stage",
+            "--stage",
+            "scoring",
+            "--db",
+            "tmp/manual-seeder.db",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert seen["max_seconds"] is None
+    assert cli_main_module._resolve_stage_max_seconds("scoring", None) == 120

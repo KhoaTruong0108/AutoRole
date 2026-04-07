@@ -91,7 +91,7 @@ def _base_payload() -> dict[str, object]:
             "last_advance_action": "next_page",
             "screenshots": [],
         },
-        "packaged": {
+        "packaging": {
             "resume_path": "resumes/corr-form-sub-1/tailored.md",
             "pdf_path": "resumes/corr-form-sub-1/tailored.pdf",
         },

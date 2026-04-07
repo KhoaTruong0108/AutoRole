@@ -73,12 +73,9 @@ class TailoringExecutor(Executor[dict[str, Any]]):
         else:
             tailored_md = tailor_resume(source_md, degree=degree, scoring=scoring)
 
-        resume_path = build_resume_path(ctx.correlation_id, version)
+        resume_path = build_resume_path(ctx.correlation_id, version, metadata)
         self._materialize_tailored_resume(
             resume_path,
-            correlation_id=ctx.correlation_id,
-            attempt=attempt,
-            degree=degree,
             content=tailored_md,
         )
 
@@ -100,7 +97,6 @@ class TailoringExecutor(Executor[dict[str, Any]]):
             "tailored_at": _utcnow_iso(),
         }
         payload["tailoring"] = tailoring_payload
-        payload["tailored"] = tailoring_payload
 
         store = self._store
         if store is None:
@@ -119,24 +115,11 @@ class TailoringExecutor(Executor[dict[str, Any]]):
     def _materialize_tailored_resume(
         resume_path: str,
         *,
-        correlation_id: str,
-        attempt: int,
-        degree: int,
         content: str,
     ) -> None:
         target = Path(resume_path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        prefix = "\n".join(
-            [
-                f"# Tailored Resume ({correlation_id})",
-                "",
-                f"- attempt: {attempt}",
-                f"- tailoring_degree: {degree}",
-                "",
-            ]
-        )
-        merged = prefix + content if content.startswith("#") else prefix + content
-        target.write_text(merged.rstrip() + "\n", encoding="utf-8")
+        target.write_text(content.rstrip() + "\n", encoding="utf-8")
 
 def _build_llm_client(config: AppConfig) -> Any:
     provider = str(config.llm.provider).lower()
