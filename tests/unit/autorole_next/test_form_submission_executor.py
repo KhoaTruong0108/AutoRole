@@ -109,47 +109,27 @@ def test_form_submission_executor_fails_without_required_inputs() -> None:
     assert result.error_type == "PreconditionError"
 
 
-def test_form_submission_executor_dry_run_succeeds_without_page() -> None:
+def test_form_submission_executor_dry_run_fails_without_shared_browser() -> None:
     store = _FakeStore(calls=[])
     FormSubmissionExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = FormSubmissionExecutor()
 
     result = asyncio.run(executor.execute(_ctx(_base_payload(), metadata={"apply_mode": "dry_run"})))
 
-    assert result.success is True
-    data = dict(result.data)
-
-    submission = data.get("form_submission")
-    assert isinstance(submission, dict)
-    assert submission.get("status") == "dry_run"
-    assert submission.get("decision") == "pass"
-    assert submission.get("confirmed") is False
-
-    session = data.get("form_session")
-    assert isinstance(session, dict)
-    assert session.get("last_advance_action") == "done"
-
-    assert len(store.calls) == 1
-    assert store.calls[0]["status"] == "dry_run"
-    assert store.calls[0]["confirmed"] is False
+    assert result.success is False
+    assert result.error_type == "PreconditionError"
+    assert "shared browser" in str(result.error).lower()
+    assert store.calls == []
 
 
-def test_form_submission_executor_submit_disabled_marks_block_decision() -> None:
+def test_form_submission_executor_submit_disabled_fails_without_shared_browser() -> None:
     store = _FakeStore(calls=[])
     FormSubmissionExecutor.configure_store(store)  # type: ignore[arg-type]
     executor = FormSubmissionExecutor()
 
     result = asyncio.run(executor.execute(_ctx(_base_payload(), metadata={"submit_disabled": True})))
 
-    assert result.success is True
-    data = dict(result.data)
-
-    submission = data.get("form_submission")
-    assert isinstance(submission, dict)
-    assert submission.get("status") == "submit_disabled"
-    assert submission.get("decision") == "block"
-    assert submission.get("confirmed") is False
-
-    assert len(store.calls) == 1
-    assert store.calls[0]["status"] == "submit_disabled"
-    assert store.calls[0]["confirmed"] is False
+    assert result.success is False
+    assert result.error_type == "PreconditionError"
+    assert "shared browser" in str(result.error).lower()
+    assert store.calls == []

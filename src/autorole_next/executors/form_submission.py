@@ -9,6 +9,7 @@ from typing import Any
 from ..form_controls.adapters import get_adapter
 from ..form_controls.executor import FormExecutor, _build_audit_log, _write_audit_log
 from ..form_controls.models import DetectionResult, ExecutionResult, ExtractedField, FieldOutcome, FillInstruction
+from ..integrations.shared_browser import connect_shared_browser_page, resolve_shared_browser, shared_browser_ready
 from .._snapflow import Executor, StageResult, StateContext
 from ..store import AutoRoleStoreAdapter
 
@@ -104,18 +105,26 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
 
         run_mode = str(metadata.get("run_mode", ""))
         apply_mode = str(metadata.get("apply_mode", "")).lower()
-        dryrun_skip_submit = (
-            bool(metadata.get("dryrun_stop_after_submit", False))
-            or run_mode == "apply-dryrun"
-            or apply_mode == "dry_run"
-        )
+        dryrun_skip_submit = True
+        # (
+        #     bool(metadata.get("dryrun_stop_after_submit", False))
+        #     or run_mode == "apply-dryrun"
+        #     or apply_mode == "dry_run"
+        # )
         force_loop = bool(metadata.get("force_form_loop", False))
         guardrail_block = bool(metadata.get("submit_disabled", False))
 
         managed_browser: dict[str, Any] | None = None
         page = _resolve_page(payload, metadata)
-        if page is None and not dryrun_skip_submit:
-            managed_browser = await _create_managed_browser_page(metadata)
+        shared_browser = resolve_shared_browser(payload, metadata)
+        if page is None:
+            if shared_browser_ready(shared_browser):
+                managed_browser = await connect_shared_browser_page(shared_browser or {})
+            else:
+                return StageResult.fail(
+                    "form submission requires an available shared browser",
+                    "PreconditionError",
+                )
             if not managed_browser.get("success", False):
                 return StageResult.fail(
                     str(managed_browser.get("error") or "form submission requires a browser page"),
@@ -126,7 +135,7 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
         try:
             outcomes: list[FieldOutcome] = []
             screenshot_path = ""
-            action = "done" if dryrun_skip_submit else "next_page"
+            action = "done" if dryrun_skip_submit else "submit"
             applied_payload: dict[str, Any] | None = None
 
             if guardrail_block:
@@ -168,12 +177,13 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
                             and bool(field_map[outcome.field_id].required)
                         ]
 
-                        file_input = await adapter.get_file_input(page)
-                        packaged_pdf_path = str(packaged.get("pdf_path") or "")
-                        if file_input is not None and packaged_pdf_path:
-                            await file_input.set_input_files(packaged_pdf_path)
-                            if hasattr(page, "wait_for_timeout"):
-                                await page.wait_for_timeout(500)
+                        # # Temporary disable the file attaching to test submit button click;
+                        # file_input = await adapter.get_file_input(page)
+                        # packaged_pdf_path = str(packaged.get("pdf_path") or "")
+                        # if file_input is not None and packaged_pdf_path:
+                        #     await file_input.set_input_files(packaged_pdf_path)
+                        #     if hasattr(page, "wait_for_timeout"):
+                        #         await page.wait_for_timeout(500)
 
                         artifacts_dir = Path("logs") / "form_submission" / ctx.correlation_id
                         artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -498,59 +508,10 @@ def _resolve_page(payload: dict[str, Any], metadata: dict[str, Any]) -> Any | No
     return None
 
 
-async def _create_managed_browser_page(metadata: dict[str, Any]) -> dict[str, Any]:
-    try:
-        from playwright.async_api import async_playwright
-    except Exception as exc:
-        return {
-            "success": False,
-            "error": "Playwright is required for live form submission",
-            "error_type": exc.__class__.__name__,
-        }
-
-    try:
-        headless = bool(metadata.get("headless", False))
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(headless=headless)
-        context = await browser.new_context()
-        page = await context.new_page()
-        return {
-            "success": True,
-            "playwright": playwright,
-            "browser": browser,
-            "context": context,
-            "page": page,
-        }
-    except Exception as exc:
-        return {
-            "success": False,
-            "error": f"Failed to create browser page for form submission: {exc}",
-            "error_type": exc.__class__.__name__,
-        }
-
-
 async def _close_managed_browser_page(managed: dict[str, Any] | None) -> None:
     if not managed or not managed.get("success"):
         return
-    page = managed.get("page")
-    context = managed.get("context")
-    browser = managed.get("browser")
     playwright = managed.get("playwright")
-    try:
-        if page is not None and hasattr(page, "close"):
-            await page.close()
-    except Exception:
-        pass
-    try:
-        if context is not None:
-            await context.close()
-    except Exception:
-        pass
-    try:
-        if browser is not None:
-            await browser.close()
-    except Exception:
-        pass
     try:
         if playwright is not None:
             await playwright.stop()
@@ -572,9 +533,11 @@ async def _ensure_submission_page_ready(
 ) -> dict[str, Any]:
     try:
         if await _needs_navigation_rehydrate(page):
-            await page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
-            frame = _find_frame(page) if bool(detection.get("used_iframe", False)) else None
-            await adapter.setup(page, frame)
+            return {
+                "success": False,
+                "error": "Shared browser page is empty or unavailable for form submission",
+                "error_type": "PreconditionError",
+            }
         return {"success": True}
     except Exception as exc:
         return {

@@ -198,4 +198,55 @@ def test_run_stage_command_scoring_keeps_short_default(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert seen["max_seconds"] is None
-    assert cli_main_module._resolve_stage_max_seconds("scoring", None) == 120
+    assert cli_main_module._resolve_stage_max_seconds("scoring", None) == 300
+
+
+def test_configured_stage_ids_reflect_topology(tmp_path: Path) -> None:
+    db_path = tmp_path / "autorole-next.db"
+
+    stages = cli_main_module._configured_stage_ids(str(db_path))
+
+    assert stages == [
+        "scoring",
+        "tailoring",
+        "packaging",
+        "session",
+        "formScraper",
+        "fieldCompleter",
+        "formSubmission",
+        "concluding",
+    ]
+
+
+def test_run_all_command_delegates_to_all_stage_worker(monkeypatch) -> None:
+    runner = CliRunner()
+    seen: dict[str, object] = {}
+
+    async def fake_run_all_stage_workers(**kwargs):
+        seen.update(kwargs)
+        return {"stages": ["scoring"], "status": "drained"}
+
+    monkeypatch.setattr(cli_main_module, "_run_all_stage_workers", fake_run_all_stage_workers)
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "all",
+            "--db",
+            "tmp/manual-seeder.db",
+            "--max-seconds",
+            "30",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert seen == {
+        "db_path": "tmp/manual-seeder.db",
+        "watch": False,
+        "poll_seconds": 1,
+        "idle_rounds": 5,
+        "max_seconds": 30,
+    }
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "drained"

@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import typer
 
-from autorole_next.app import build_runner, build_store
+from autorole_next.app import build_runner, build_store, build_topology
 from autorole_next._snapflow import RunStatus
 from autorole_next.payloads import ExplorationInput, ListingPayload, ListingSeed
 from autorole_next.seeders.exploring import ExploringSeeder
@@ -20,7 +20,7 @@ app = typer.Typer(help="AutoRole Next command line interface")
 run_app = typer.Typer(help="Seed and run autorole_next workflows")
 app.add_typer(run_app, name="run")
 
-DEFAULT_STAGE_MAX_SECONDS = 300
+DEFAULT_STAGE_MAX_SECONDS = 600
 LONG_RUNNING_STAGE_MAX_SECONDS = {
     LLM_APPLYING: 900,
 }
@@ -153,6 +153,23 @@ async def _count_running_for_stage(store: Any, stage: str) -> int:
     return count
 
 
+async def _count_running_for_stages(store: Any, stages: list[str]) -> int:
+    canonical_stages = {canonical_stage_id(stage) for stage in stages}
+    running = await store.list_runs(status=RunStatus.RUNNING, limit=1000, offset=0)
+    count = 0
+    for run in running:
+        ctx = await store.load_context(run.correlation_id)
+        if ctx is not None and canonical_stage_id(ctx.current_stage) in canonical_stages:
+            count += 1
+    return count
+
+
+def _configured_stage_ids(db_path: str) -> list[str]:
+    store = build_store(db_path)
+    topology = build_topology(store)
+    return [stage.id for stage in topology.stages]
+
+
 async def _run_stage_worker(
     *,
     db_path: str,
@@ -206,6 +223,65 @@ async def _run_stage_worker(
         await runner.shutdown(mode="hard")
 
 
+async def _run_all_stage_workers(
+    *,
+    db_path: str,
+    watch: bool,
+    poll_seconds: float,
+    idle_rounds: int,
+    max_seconds: int | None,
+) -> dict[str, Any]:
+    stage_ids = _configured_stage_ids(db_path)
+    canonical_stages = [canonical_stage_id(stage_id) for stage_id in stage_ids]
+    effective_max_seconds = DEFAULT_STAGE_MAX_SECONDS if max_seconds is None else max_seconds
+    default_timeout_ms = DEFAULT_STAGE_MAX_SECONDS * 1000
+    stage_timeout_ms = {s: ms * 1000 for s, ms in LONG_RUNNING_STAGE_MAX_SECONDS.items()}
+    runner = build_runner(db_path, default_stage_timeout_ms=default_timeout_ms, stage_timeout_ms=stage_timeout_ms)
+    store = build_store(db_path)
+
+    await runner.start(stage_ids=canonical_stages)
+    started_at = time.monotonic()
+    stable_idle_rounds = 0
+
+    try:
+        while True:
+            queue_depths = {
+                stage: await runner._topology.queue_backend.depth(stage)  # noqa: SLF001 - used for CLI worker visibility
+                for stage in canonical_stages
+            }
+            total_queue_depth = sum(queue_depths.values())
+            running_count = await _count_running_for_stages(store, canonical_stages)
+
+            if not watch:
+                if total_queue_depth == 0 and running_count == 0:
+                    stable_idle_rounds += 1
+                else:
+                    stable_idle_rounds = 0
+                if stable_idle_rounds >= max(1, idle_rounds):
+                    return {
+                        "stages": canonical_stages,
+                        "status": "drained",
+                        "queue_depth": total_queue_depth,
+                        "queue_depths": queue_depths,
+                        "running": running_count,
+                        "elapsed_seconds": round(time.monotonic() - started_at, 3),
+                    }
+
+                if effective_max_seconds > 0 and (time.monotonic() - started_at) >= effective_max_seconds:
+                    return {
+                        "stages": canonical_stages,
+                        "status": "timeout",
+                        "queue_depth": total_queue_depth,
+                        "queue_depths": queue_depths,
+                        "running": running_count,
+                        "elapsed_seconds": round(time.monotonic() - started_at, 3),
+                    }
+
+            await asyncio.sleep(max(0.05, poll_seconds))
+    finally:
+        await runner.shutdown(mode="hard")
+
+
 @run_app.command("seed")
 def seed(
     db: str = typer.Option("tmp/autorole-next.db", "--db", help="SQLite database path."),
@@ -250,13 +326,37 @@ def run_stage(
     max_seconds: int | None = typer.Option(
         None,
         "--max-seconds",
-        help="Maximum seconds to wait before returning timeout in non-watch mode. Defaults to 120s, or 900s for llm_applying. Use 0 to disable.",
+           help="Maximum seconds to wait before returning timeout in non-watch mode. Defaults to 300s, or 900s for llm_applying. Use 0 to disable.",
     ),
 ) -> None:
     result = asyncio.run(
         _run_stage_worker(
             db_path=db,
             stage=stage,
+            watch=watch,
+            poll_seconds=poll_seconds,
+            idle_rounds=idle_rounds,
+            max_seconds=max_seconds,
+        )
+    )
+    typer.echo(json.dumps(result, indent=2))
+
+
+@run_app.command("all")
+def run_all(
+    db: str = typer.Option("tmp/autorole-next.db", "--db", help="SQLite database path."),
+    watch: bool = typer.Option(False, "--watch", help="Keep workers alive until interrupted."),
+    poll_seconds: float = typer.Option(1, "--poll-seconds", help="Polling interval while observing queue drain."),
+    idle_rounds: int = typer.Option(5, "--idle-rounds", help="Consecutive idle checks before considering pipeline drained."),
+    max_seconds: int | None = typer.Option(
+        None,
+        "--max-seconds",
+        help="Maximum seconds to wait before returning timeout in non-watch mode. Defaults to 300s. Use 0 to disable.",
+    ),
+) -> None:
+    result = asyncio.run(
+        _run_all_stage_workers(
+            db_path=db,
             watch=watch,
             poll_seconds=poll_seconds,
             idle_rounds=idle_rounds,

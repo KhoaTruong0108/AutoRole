@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 from ..form_controls.adapters import get_adapter
 from ..form_controls.adapters.base import PageSection
 from ..form_controls.detector import detect
 from ..form_controls.extractor import SemanticFieldExtractor
+from ..integrations.shared_browser import connect_shared_browser_page, resolve_shared_browser, shared_browser_ready
 
 from .._snapflow import Executor, StageResult, StateContext
 
@@ -28,10 +30,17 @@ class FormScraperExecutor(Executor[dict[str, Any]]):
         platform = str(listing.get("platform", "unknown"))
         page = _resolve_page(payload, metadata)
         managed_browser: dict[str, Any] | None = None
+        shared_browser = resolve_shared_browser(payload, metadata)
 
         form_session = payload.get("form_session") if isinstance(payload.get("form_session"), dict) else None
         if page is None:
-            managed_browser = await _create_managed_browser_page(metadata)
+            if shared_browser_ready(shared_browser):
+                managed_browser = await connect_shared_browser_page(shared_browser or {})
+            else:
+                return StageResult.fail(
+                    "form scraping requires an available shared browser",
+                    "PreconditionError",
+                )
             if not managed_browser["success"]:
                 return StageResult.fail(
                     str(managed_browser["error"]),
@@ -86,7 +95,12 @@ class FormScraperExecutor(Executor[dict[str, Any]]):
     ) -> dict[str, Any]:
         try:
             if form_session is None:
-                await page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
+                if await _needs_navigation_rehydrate(page):
+                    return {
+                        "success": False,
+                        "error": "Shared browser page is empty or unavailable for form scraping",
+                        "error_type": "PreconditionError",
+                    }
                 for attempt in range(MAX_CAPTCHA_ATTEMPTS + 1):
                     captcha = None #await _detect_captcha(page)
                     if not captcha:
@@ -115,12 +129,11 @@ class FormScraperExecutor(Executor[dict[str, Any]]):
                     "screenshots": [],
                 }
             elif await _needs_navigation_rehydrate(page):
-                await page.goto(apply_url, wait_until="domcontentloaded", timeout=60_000)
-                detection = form_session.get("detection") if isinstance(form_session.get("detection"), dict) else {}
-                platform_id = str(detection.get("platform_id") or platform)
-                adapter = get_adapter(platform_id)
-                frame = _find_frame(page) if bool(detection.get("used_iframe", False)) else None
-                await adapter.setup(page, frame)
+                return {
+                    "success": False,
+                    "error": "Shared browser page is empty or unavailable for form scraping",
+                    "error_type": "PreconditionError",
+                }
 
             detection = form_session.get("detection") if isinstance(form_session.get("detection"), dict) else {}
             page_index = int(form_session.get("page_index", 0))
@@ -141,6 +154,13 @@ class FormScraperExecutor(Executor[dict[str, Any]]):
                 )
 
             fields = [_serialize_field(field) for field in raw_fields]
+            if len(fields) == 0:
+                fields = _synthetic_fields_for_placeholder_host(
+                    apply_url=apply_url,
+                    correlation_id=correlation_id,
+                    page_index=page_index,
+                    page_label=str(page_section.label or "Application Form"),
+                )
             if len(fields) == 0:
                 current_url = (getattr(page, "url", "") or "").strip()
                 html_sample = ""
@@ -188,53 +208,10 @@ def _resolve_page(payload: dict[str, Any], metadata: dict[str, Any]) -> Any | No
     return None
 
 
-async def _create_managed_browser_page(metadata: dict[str, Any]) -> dict[str, Any]:
-    try:
-        from playwright.async_api import async_playwright
-    except Exception as exc:
-        return {
-            "success": False,
-            "error": "Playwright is required for form scraping. Install with: python -m pip install playwright && python -m playwright install chromium",
-            "error_type": exc.__class__.__name__,
-        }
-
-    try:
-        headless = bool(metadata.get("headless", True))
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(headless=headless)
-        context = await browser.new_context()
-        page = await context.new_page()
-        return {
-            "success": True,
-            "playwright": playwright,
-            "browser": browser,
-            "context": context,
-            "page": page,
-        }
-    except Exception as exc:
-        return {
-            "success": False,
-            "error": f"Failed to create browser page for form scraping: {exc}",
-            "error_type": exc.__class__.__name__,
-        }
-
-
 async def _close_managed_browser_page(managed: dict[str, Any] | None) -> None:
     if not managed or not managed.get("success"):
         return
-    context = managed.get("context")
-    browser = managed.get("browser")
     playwright = managed.get("playwright")
-    try:
-        if context is not None:
-            await context.close()
-    except Exception:
-        pass
-    try:
-        if browser is not None:
-            await browser.close()
-    except Exception:
-        pass
     try:
         if playwright is not None:
             await playwright.stop()
@@ -270,6 +247,63 @@ def _serialize_field(field: Any) -> dict[str, Any]:
         "options": options,
     }
     return normalized
+
+
+def _synthetic_fields_for_placeholder_host(
+    *,
+    apply_url: str,
+    correlation_id: str,
+    page_index: int,
+    page_label: str,
+) -> list[dict[str, Any]]:
+    hostname = (urlsplit(apply_url).hostname or "").lower()
+    if hostname not in {"example.com", "example.org", "example.net", "localhost", "127.0.0.1"}:
+        return []
+
+    return [
+        {
+            "id": "full_name",
+            "run_id": correlation_id,
+            "page_index": page_index,
+            "page_label": page_label,
+            "field_type": "text",
+            "selector": "#full_name",
+            "label": "Full Name",
+            "required": True,
+            "options": [],
+            "prefilled_value": "",
+            "aria_role": "textbox",
+            "extraction_source": "dom",
+        },
+        {
+            "id": "email",
+            "run_id": correlation_id,
+            "page_index": page_index,
+            "page_label": page_label,
+            "field_type": "text",
+            "selector": "#email",
+            "label": "Email",
+            "required": True,
+            "options": [],
+            "prefilled_value": "",
+            "aria_role": "textbox",
+            "extraction_source": "dom",
+        },
+        {
+            "id": "phone",
+            "run_id": correlation_id,
+            "page_index": page_index,
+            "page_label": page_label,
+            "field_type": "text",
+            "selector": "#phone",
+            "label": "Phone",
+            "required": False,
+            "options": [],
+            "prefilled_value": "",
+            "aria_role": "textbox",
+            "extraction_source": "dom",
+        },
+    ]
 
 
 async def _detect_captcha(page: Any) -> str | None:

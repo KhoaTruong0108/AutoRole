@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -104,12 +105,44 @@ class SQLiteApplicationsProvider:
             },
         }
 
+    async def export_payload(self, correlation_id: str, destination_dir: str | Path | None = None) -> Path | None:
+        details = await self.get_details(correlation_id)
+        if details is None:
+            return None
+
+        export_dir = Path(destination_dir) if destination_dir is not None else Path("logs") / "tui_exports" / "applications"
+        export_dir.mkdir(parents=True, exist_ok=True)
+
+        export_path = export_dir / f"{correlation_id}.json"
+        export_payload = self._build_export_payload(details)
+        export_path.write_text(json.dumps(export_payload, indent=2) + "\n", encoding="utf-8")
+        return export_path
+
     @staticmethod
     def _decode_json(payload: str, *, fallback_key: str) -> Any:
         try:
             return json.loads(payload)
         except json.JSONDecodeError:
             return {fallback_key: payload}
+
+    @staticmethod
+    def _build_export_payload(details: dict[str, Any]) -> dict[str, Any]:
+        run_payload = details.get("run") if isinstance(details.get("run"), dict) else {}
+        context_payload = details.get("context") if isinstance(details.get("context"), dict) else {}
+        return {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "run": run_payload,
+            "context": context_payload,
+            "message_payload": {
+                "correlation_id": str(run_payload.get("correlation_id") or ""),
+                "trace_id": str(context_payload.get("trace_id") or ""),
+                "current_stage": str(context_payload.get("current_stage") or ""),
+                "attempt": int(context_payload.get("attempt") or 0),
+                "data": context_payload.get("data"),
+                "artifact_refs": context_payload.get("artifact_refs"),
+                "metadata": context_payload.get("metadata"),
+            },
+        }
 
     @staticmethod
     def _matches_search(row: ApplicationSummary, search: str) -> bool:

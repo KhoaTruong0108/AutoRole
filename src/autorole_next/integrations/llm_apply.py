@@ -254,6 +254,7 @@ def _launch_chrome(
     metadata: dict[str, Any],
     log_stream: BinaryIO,
 ) -> subprocess.Popen[Any]:
+    profile_dir = Path(profile_dir).expanduser()
     _free_port(port)
     _seed_chrome_profile(profile_dir, metadata)
     command = [

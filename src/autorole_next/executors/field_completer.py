@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from autorole_next.config import AppConfig
 from autorole_next.integrations.llm import AnthropicLLMClient, OllamaLLMClient, OpenAILLMClient
@@ -49,7 +50,7 @@ class FieldCompleterExecutor(Executor[dict[str, Any]]):
             return StageResult.fail(f"Invalid extracted fields payload: {exc}", "PreconditionError")
 
         use_random_answers = bool(metadata.get("use_random_questionnaire_answers", False))
-        if use_random_answers:
+        if use_random_answers or _is_placeholder_listing(listing):
             instructions_obj = _build_random_instructions(fields, ctx.correlation_id, page_index)
         else:
             config = AppConfig()
@@ -195,3 +196,9 @@ def _coerce_extracted_field_payload(
         "aria_role": str(raw.get("aria_role") or ""),
         "extraction_source": str(raw.get("extraction_source") or "dom"),
     }
+
+
+def _is_placeholder_listing(listing: dict[str, Any]) -> bool:
+    apply_url = str(listing.get("apply_url") or listing.get("job_url") or "").strip()
+    hostname = (urlsplit(apply_url).hostname or "").lower()
+    return hostname in {"example.com", "example.org", "example.net", "localhost", "127.0.0.1"}

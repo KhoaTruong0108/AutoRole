@@ -8,7 +8,7 @@ class GreenhouseAdapter(ATSAdapter):
 	config = AdapterConfig(
 		apply_button_selector='a[href*="/apply"]',
 		next_button_selector="",
-		submit_button_selector="#submit_app",
+		submit_button_selector='.application--submit button[type="submit"]',
 	)
 
 	async def setup(self, page: object, frame: object | None) -> None:
@@ -26,6 +26,8 @@ class GreenhouseAdapter(ATSAdapter):
 		return PageSection(label="Application form", root="form#application_form")
 
 	async def advance(self, page: object) -> str:
+		if hasattr(page, "wait_for_selector"):
+			await page.wait_for_selector(self.config.submit_button_selector, state="visible", timeout=10_000)
 		if hasattr(page, "click"):
 			await page.click(self.config.submit_button_selector)
 		return "submit"

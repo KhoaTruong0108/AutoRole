@@ -7,8 +7,8 @@ from .view_models import resolve_stage_label
 
 def applications_content(provider: SQLiteApplicationsProvider):
     try:
-        from textual.containers import Vertical, VerticalScroll
-        from textual.widgets import Checkbox, DataTable, Input, Static
+        from textual.containers import Horizontal, Vertical, VerticalScroll
+        from textual.widgets import Button, Checkbox, DataTable, Input, Static
     except ImportError as exc:
         raise RuntimeError("textual package is required for the TUI") from exc
 
@@ -16,10 +16,16 @@ def applications_content(provider: SQLiteApplicationsProvider):
         def __init__(self) -> None:
             super().__init__()
             self._provider = provider
+            self._selected_correlation_id: str | None = None
 
         def compose(self):
-            yield Input(placeholder="Search by correlation id, run status, stage, or attempt", id="applications-filter")
-            yield Checkbox("Auto-refresh", value=True, id="applications-auto-refresh")
+            yield Input(
+                placeholder="Search by correlation id, run status, stage, or attempt",
+                id="applications-filter",
+            )
+            with Horizontal(id="applications-controls"):
+                yield Checkbox("Auto-refresh", value=True, id="applications-auto-refresh")
+                yield Button("Export Payload", id="applications-export")
             yield DataTable(id="applications-table")
             with VerticalScroll(id="applications-details-scroll"):
                 yield Static(
@@ -30,8 +36,10 @@ def applications_content(provider: SQLiteApplicationsProvider):
 
         async def on_mount(self) -> None:
             table = self.query_one("#applications-table", DataTable)
+            export_button = self.query_one("#applications-export", Button)
             table.cursor_type = "row"
             table.add_columns("Correlation ID", "Run", "Stage", "Attempt", "Updated")
+            export_button.disabled = True
             self.set_interval(5.0, self._schedule_auto_refresh)
             self._schedule_refresh()
 
@@ -46,6 +54,7 @@ def applications_content(provider: SQLiteApplicationsProvider):
         async def _refresh(self) -> None:
             table = self.query_one("#applications-table", DataTable)
             details = self.query_one("#applications-details", Static)
+            export_button = self.query_one("#applications-export", Button)
             filter_value = self.query_one("#applications-filter", Input).value
 
             try:
@@ -61,9 +70,18 @@ def applications_content(provider: SQLiteApplicationsProvider):
                         key=row.correlation_id,
                     )
                 if not rows:
+                    self._selected_correlation_id = None
+                    export_button.disabled = True
                     details.update("No application context rows found")
+                elif self._selected_correlation_id is not None and not any(
+                    row.correlation_id == self._selected_correlation_id for row in rows
+                ):
+                    self._selected_correlation_id = None
+                    export_button.disabled = True
             except Exception as exc:
                 table.clear(columns=False)
+                self._selected_correlation_id = None
+                export_button.disabled = True
                 details.update(f"Applications error: {exc}")
 
         async def on_input_changed(self, event: Input.Changed) -> None:
@@ -80,18 +98,45 @@ def applications_content(provider: SQLiteApplicationsProvider):
         async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
             await self._show_detail(event.row_key)
 
+        async def on_button_pressed(self, event: Button.Pressed) -> None:
+            if event.button.id != "applications-export":
+                return
+
+            correlation_id = self._selected_correlation_id
+            if not correlation_id:
+                return
+
+            export_path = await self._provider.export_payload(correlation_id)
+            if export_path is None:
+                self._notify(f"Application context not found for export: {correlation_id}")
+                return
+
+            self._notify(f"Exported payload to {export_path}")
+
         async def _show_detail(self, row_key: object | None) -> None:
             details = self.query_one("#applications-details", Static)
+            export_button = self.query_one("#applications-export", Button)
             if row_key is None:
+                self._selected_correlation_id = None
+                export_button.disabled = True
                 details.update("Select an application context row to inspect details")
                 return
 
             correlation_id = str(row_key.value)
             payload = await self._provider.get_details(correlation_id)
             if payload is None:
+                self._selected_correlation_id = None
+                export_button.disabled = True
                 details.update("Application context not found")
                 return
 
+            self._selected_correlation_id = correlation_id
+            export_button.disabled = False
             details.update(format_detail_payload(payload))
+
+        def _notify(self, message: str) -> None:
+            notify = getattr(self.app, "notify", None)
+            if callable(notify):
+                notify(message)
 
     return ApplicationsWidget()

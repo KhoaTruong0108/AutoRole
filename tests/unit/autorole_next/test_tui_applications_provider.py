@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 
 import pytest
@@ -76,3 +77,44 @@ async def test_applications_provider_returns_context_data_and_artifact_refs(tmp_
     artifact_refs = details["context"]["artifact_refs"]
     assert isinstance(artifact_refs, list)
     assert artifact_refs[0]["kind"] == "audit"
+
+
+@pytest.mark.asyncio
+async def test_applications_provider_exports_pipeline_context_payload(tmp_path) -> None:
+    store = AutoRoleStoreAdapter(str(tmp_path / "autorole-next.db"))
+    seed = _seed()
+    correlation_id = correlation_id_for_listing(seed.listing)
+    canonical_key = canonical_listing_key(seed.listing)
+
+    created, _ = await store.claim_listing_seed(correlation_id, seed)
+    assert created is True
+
+    payload = SeedRunPayload(
+        listing=seed.listing,
+        source_name=seed.source_name,
+        source_metadata=seed.source_metadata,
+        discovered_at=seed.discovered_at,
+        canonical_key=canonical_key,
+    )
+    context = StateContext[dict[str, object]](
+        correlation_id=correlation_id,
+        current_stage=FORM_SUBMISSION,
+        data=payload.model_dump(mode="json"),
+        metadata={"source_name": seed.source_name, "run_mode": "apply"},
+    )
+    await store.save_context(context)
+    await store.create_run(correlation_id, {})
+    await store.set_run_status(correlation_id, RunStatus.RUNNING)
+
+    provider = SQLiteApplicationsProvider(store.path)
+    export_dir = tmp_path / "exports"
+    export_path = await provider.export_payload(correlation_id, export_dir)
+
+    assert export_path == export_dir / f"{correlation_id}.json"
+    exported = json.loads(export_path.read_text(encoding="utf-8"))
+    assert exported["run"]["correlation_id"] == correlation_id
+    assert exported["context"]["current_stage"] == FORM_SUBMISSION
+    assert exported["message_payload"]["correlation_id"] == correlation_id
+    assert exported["message_payload"]["current_stage"] == FORM_SUBMISSION
+    assert exported["message_payload"]["data"]["listing"]["job_url"] == seed.listing.job_url
+    assert exported["message_payload"]["metadata"]["run_mode"] == "apply"

@@ -24,5 +24,5 @@ class PackagingGate(Gate):
         if apply_mode == LLM_APPLYING:
             return LLM_APPLYING
 
-        return LLM_APPLYING
-        # return SESSION
+        # return LLM_APPLYING
+        return SESSION

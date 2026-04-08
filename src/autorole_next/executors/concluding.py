@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .._snapflow import Executor, StageResult, StateContext
+from ..integrations.shared_browser import resolve_shared_browser, shared_browser_ready, shutdown_shared_browser
 from ..store import AutoRoleStoreAdapter
 
 
@@ -22,11 +23,22 @@ class ConcludingExecutor(Executor[dict[str, Any]]):
 
     async def execute(self, ctx: StateContext[dict[str, Any]]) -> StageResult[dict[str, Any]]:
         payload = dict(ctx.data)
+        metadata = dict(ctx.metadata)
 
         scoring = payload.get("scoring") if isinstance(payload.get("scoring"), dict) else {}
         packaging = payload.get("packaging") if isinstance(payload.get("packaging"), dict) else {}
         submission = payload.get("form_submission") if isinstance(payload.get("form_submission"), dict) else {}
         llm_applying = payload.get("llm_applying") if isinstance(payload.get("llm_applying"), dict) else {}
+        shared_browser = resolve_shared_browser(payload, metadata)
+        shared_browser_status = "not_requested"
+        if shared_browser_ready(shared_browser):
+            shared_browser = await shutdown_shared_browser(shared_browser or {})
+            shared_browser_status = str(shared_browser.get("status") or "closed")
+            payload["shared_browser"] = shared_browser
+            if isinstance(payload.get("session"), dict):
+                session_payload = dict(payload.get("session"))
+                session_payload["shared_browser"] = shared_browser
+                payload["session"] = session_payload
 
         final_payload = {
             "completed_at": _utcnow_iso(),
@@ -34,6 +46,7 @@ class ConcludingExecutor(Executor[dict[str, Any]]):
             "resume_path": str(packaging.get("resume_path", "")),
             "pdf_path": str(packaging.get("pdf_path", "")),
             "submission_status": str(submission.get("status") or llm_applying.get("status") or ""),
+            "shared_browser_status": shared_browser_status,
         }
         payload["concluding"] = final_payload
 

@@ -45,7 +45,7 @@ def build_topology(store: AutoRoleStoreAdapter, stage_timeout_ms: dict[str, int]
             StageNode(id=FORM_SCRAPER, executor=FormScraperExecutor, gate=FormScraperGate(), **_timeout(FORM_SCRAPER)),
             StageNode(id=FIELD_COMPLETER, executor=FieldCompleterExecutor, gate=FieldCompleterGate(), **_timeout(FIELD_COMPLETER)),
             StageNode(id=FORM_SUBMISSION, executor=FormSubmissionExecutor, gate=FormSubmissionGate(), **_timeout(FORM_SUBMISSION)),
-            StageNode(id=LLM_APPLYING, executor=LlmApplyingExecutor, gate=LlmApplyingGate(), **_timeout(LLM_APPLYING)),
+            # StageNode(id=LLM_APPLYING, executor=LlmApplyingExecutor, gate=LlmApplyingGate(), **_timeout(LLM_APPLYING)),
             StageNode(id=CONCLUDING, executor=ConcludingExecutor, **_timeout(CONCLUDING)),
         ],
         queue_backend=SQLiteQueueAdapter(store.path),

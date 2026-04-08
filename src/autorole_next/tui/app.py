@@ -71,16 +71,16 @@ def create_tui_app():
                 with TabbedContent():
                     with TabPane("Stage Monitor"):
                         yield stage_monitor_content(build_stage_monitor_provider_from_env())
-                    with TabPane("Listings"):
-                        yield listings_content(build_listings_provider_from_env())
+                    # with TabPane("Listings"):
+                    #     yield listings_content(build_listings_provider_from_env())
                     with TabPane("Applications"):
                         yield applications_content(build_applications_provider_from_env())
-                    with TabPane("Dashboard"):
-                        yield dashboard_content()
-                    with TabPane("Queue Depths"):
-                        yield queue_depths_content()
-                    with TabPane("Run Inspector"):
-                        yield run_inspector_content()
+                    # with TabPane("Dashboard"):
+                    #     yield dashboard_content()
+                    # with TabPane("Queue Depths"):
+                    #     yield queue_depths_content()
+                    # with TabPane("Run Inspector"):
+                    #     yield run_inspector_content()
                     with TabPane("DLQ Browser"):
                         yield dlq_browser_content()
             yield Footer()
