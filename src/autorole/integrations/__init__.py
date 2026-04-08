@@ -1,2 +1,0 @@
-"""External integrations for AutoRole."""
-
