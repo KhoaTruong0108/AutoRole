@@ -8,6 +8,7 @@ import pytest
 from autorole_next._snapflow import StateContext
 from autorole_next.executors.scoring import ScoringExecutor
 from autorole_next.scoring import strategies as scoring_strategies
+from autorole_next.scoring_engine import compute_overall_score
 
 
 @dataclass
@@ -160,7 +161,15 @@ def test_scoring_executor_uses_llm_strategy_from_metadata(monkeypatch: pytest.Mo
 
     class _FakeLLM:
         async def call(self, system: str, user: str, response_model=None, temperature=None) -> str:  # noqa: ANN001
-            return "SCORE: 8\nKEYWORDS: python,aws,docker\nREASONING: Strong backend fit with cloud experience."
+            return (
+                "TECHNICAL_SKILLS: 9\n"
+                "EXPERIENCE_DEPTH: 8\n"
+                "SENIORITY_ALIGNMENT: 7\n"
+                "DOMAIN_RELEVANCE: 8\n"
+                "CULTURE_FIT: 6\n"
+                "KEYWORDS: python,aws,docker\n"
+                "REASONING: Strong backend fit with cloud experience, but some domain and culture signals are less explicit."
+            )
 
     monkeypatch.setattr(scoring_strategies, "_build_llm_client", lambda _cfg: _FakeLLM())
 
@@ -188,7 +197,16 @@ def test_scoring_executor_uses_llm_strategy_from_metadata(monkeypatch: pytest.Mo
     scoring = dict(result.data).get("scoring")
     assert isinstance(scoring, dict)
     assert scoring.get("strategy") == "llm"
-    assert float(scoring.get("overall_score", 0.0)) == 0.8
+    assert scoring.get("criteria_scores") == {
+        "technical_skills": 0.9,
+        "experience_depth": 0.8,
+        "seniority_alignment": 0.7,
+        "domain_relevance": 0.8,
+        "culture_fit": 0.6,
+    }
+    assert float(scoring.get("overall_score", 0.0)) == pytest.approx(
+        compute_overall_score(scoring.get("criteria_scores", {}))
+    )
     assert scoring.get("keywords") == ["python", "aws", "docker"]
     assert "score_reasoning" in scoring
     assert len(store.calls) == 1
@@ -201,7 +219,15 @@ def test_scoring_executor_uses_scoring_config_strategy(monkeypatch: pytest.Monke
 
     class _FakeLLM:
         async def call(self, system: str, user: str, response_model=None, temperature=None) -> str:  # noqa: ANN001
-            return "SCORE: 7\nKEYWORDS: sql,api\nREASONING: Solid platform and API background."
+            return (
+                "TECHNICAL_SKILLS: 7\n"
+                "EXPERIENCE_DEPTH: 8\n"
+                "SENIORITY_ALIGNMENT: 7\n"
+                "DOMAIN_RELEVANCE: 6\n"
+                "CULTURE_FIT: 6\n"
+                "KEYWORDS: sql,api\n"
+                "REASONING: Solid platform and API background with moderate domain overlap."
+            )
 
     monkeypatch.setattr(scoring_strategies, "_build_llm_client", lambda _cfg: _FakeLLM())
 
@@ -233,5 +259,28 @@ def test_scoring_executor_uses_scoring_config_strategy(monkeypatch: pytest.Monke
     scoring = dict(result.data).get("scoring")
     assert isinstance(scoring, dict)
     assert scoring.get("strategy") == "llm"
-    assert float(scoring.get("overall_score", 0.0)) == 0.7
+    assert scoring.get("criteria_scores") == {
+        "technical_skills": 0.7,
+        "experience_depth": 0.8,
+        "seniority_alignment": 0.7,
+        "domain_relevance": 0.6,
+        "culture_fit": 0.6,
+    }
+    assert float(scoring.get("overall_score", 0.0)) == pytest.approx(
+        compute_overall_score(scoring.get("criteria_scores", {}))
+    )
     assert len(store.calls) == 1
+
+
+def test_parse_llm_response_keeps_backward_compatible_single_score() -> None:
+    parsed = scoring_strategies._parse_llm_response(  # type: ignore[attr-defined]
+        "SCORE: 8\nKEYWORDS: python,aws\nREASONING: Strong fit with relevant cloud delivery experience."
+    )
+
+    assert parsed["criteria_scores"] == {
+        "technical_skills": 0.8,
+        "experience_depth": 0.8,
+        "seniority_alignment": 0.8,
+        "domain_relevance": 0.8,
+        "culture_fit": 0.8,
+    }

@@ -26,6 +26,22 @@ _CRITERIA_KEYS = (
     "culture_fit",
 )
 
+_CRITERIA_LABELS = {
+    "technical_skills": "TECHNICAL_SKILLS",
+    "experience_depth": "EXPERIENCE_DEPTH",
+    "seniority_alignment": "SENIORITY_ALIGNMENT",
+    "domain_relevance": "DOMAIN_RELEVANCE",
+    "culture_fit": "CULTURE_FIT",
+}
+
+_CRITERIA_ALIASES = {
+    "TECHNICAL_SKILLS": "technical_skills",
+    "EXPERIENCE_DEPTH": "experience_depth",
+    "SENIORITY_ALIGNMENT": "seniority_alignment",
+    "DOMAIN_RELEVANCE": "domain_relevance",
+    "CULTURE_FIT": "culture_fit",
+}
+
 
 class HeuristicScoringStrategy:
     async def score(
@@ -109,11 +125,11 @@ class LLMScoringStrategy:
             response_model=None,
         )
         parsed = _parse_llm_response(str(response))
-        overall = round(parsed["score"] / 10.0, 4)
-
-        criteria_scores = {key: overall for key in _CRITERIA_KEYS}
+        criteria_scores = parsed["criteria_scores"]
+        overall = round(compute_overall_score(criteria_scores, app_config.scoring_weights), 4)
         matched, mismatched = split_matched(criteria_scores)
         keywords = [token.strip() for token in parsed["keywords"].split(",") if token.strip()]
+        raw_scores = ", ".join(f"{_CRITERIA_LABELS[key]}={int(round(value * 10))}" for key, value in criteria_scores.items())
 
         return {
             "strategy": "llm",
@@ -121,7 +137,7 @@ class LLMScoringStrategy:
             "criteria_scores": criteria_scores,
             "matched": matched,
             "mismatched": mismatched,
-            "jd_summary": f"llm_score={parsed['score']} keywords={len(keywords)}",
+            "jd_summary": f"llm_scores={raw_scores} keywords={len(keywords)}",
             "keywords": keywords,
             "score_reasoning": parsed["reasoning"],
         }
@@ -169,12 +185,14 @@ def _build_llm_user_prompt(listing: dict[str, Any], jd_text: str, resume_text: s
         f"TITLE: {title}\n"
         f"COMPANY: {company}\n"
         f"PLATFORM: {platform}\n\n"
-        f"DESCRIPTION:\n{jd_text}"
+        f"DESCRIPTION:\n{jd_text}\n\n"
+        "Evaluate the candidate against the requested five criteria. Score each criterion independently based on evidence in the resume, not by averaging from a gut-feel overall score."
     )
 
 
 def _parse_llm_response(response: str) -> dict[str, Any]:
-    score: int | None = None
+    criterion_scores_raw: dict[str, int] = {}
+    fallback_score: int | None = None
     keywords = ""
     reasoning_lines: list[str] = []
     in_reasoning = False
@@ -182,11 +200,18 @@ def _parse_llm_response(response: str) -> dict[str, Any]:
     for raw_line in response.splitlines():
         line = raw_line.strip()
         upper = line.upper()
+        alias = _match_criteria_alias(upper)
+        if alias is not None:
+            in_reasoning = False
+            match = re.search(r"\d+", line)
+            if match is not None:
+                criterion_scores_raw[alias] = max(1, min(10, int(match.group(0))))
+            continue
         if upper.startswith("SCORE:"):
             in_reasoning = False
             match = re.search(r"\d+", line)
             if match is not None:
-                score = max(1, min(10, int(match.group(0))))
+                fallback_score = max(1, min(10, int(match.group(0))))
             continue
         if upper.startswith("KEYWORDS:"):
             in_reasoning = False
@@ -201,12 +226,26 @@ def _parse_llm_response(response: str) -> dict[str, Any]:
         if in_reasoning and line:
             reasoning_lines.append(line)
 
-    if score is None:
-        raise ValueError("ScoringExecutor: LLM scoring response is missing SCORE")
+    if not criterion_scores_raw:
+        if fallback_score is None:
+            raise ValueError("ScoringExecutor: LLM scoring response is missing criterion scores")
+        criterion_scores_raw = {key: fallback_score for key in _CRITERIA_KEYS}
+
+    criteria_scores = {
+        key: round(max(1, min(10, criterion_scores_raw.get(key, fallback_score or 1))) / 10.0, 4)
+        for key in _CRITERIA_KEYS
+    }
 
     reasoning = " ".join(reasoning_lines).strip() or response.strip()
     return {
-        "score": score,
+        "criteria_scores": criteria_scores,
         "keywords": keywords,
         "reasoning": reasoning,
     }
+
+
+def _match_criteria_alias(upper_line: str) -> str | None:
+    for label, alias in _CRITERIA_ALIASES.items():
+        if upper_line.startswith(f"{label}:"):
+            return alias
+    return None

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .._snapflow import Executor, StageResult, StateContext
-from ..integrations.shared_browser import launch_shared_browser, shared_browser_requested
+from ..integrations.shared_browser import launch_shared_browser, shared_browser_ready, shared_browser_requested
 from ..store import AutoRoleStoreAdapter
 
 
@@ -50,13 +50,16 @@ class SessionExecutor(Executor[dict[str, Any]]):
                     authenticated=authenticated,
                 )
             except Exception as exc:
-                shared_browser = {
-                    "kind": "shared_browser",
-                    "status": "error",
-                    "error": str(exc),
-                    "error_type": exc.__class__.__name__,
-                    "failed_at": _utcnow_iso(),
-                }
+                return StageResult.fail(
+                    f"session failed to launch shared browser: {exc}",
+                    "SessionPreconditionError",
+                )
+
+            if not shared_browser_ready(shared_browser):
+                return StageResult.fail(
+                    "session requires a ready shared browser but received an unready descriptor",
+                    "SessionPreconditionError",
+                )
         else:
             shared_browser = {
                 "kind": "shared_browser",

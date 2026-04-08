@@ -60,7 +60,8 @@ def create_tui_app():
 
         #applications-filter,
         #applications-auto-refresh,
-        #applications-export {
+        #applications-export,
+        #applications-manual-submit {
             margin: 0;
         }
         """

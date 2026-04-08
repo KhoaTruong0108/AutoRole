@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import socket
 import shutil
 import tempfile
 import urllib.error
@@ -21,6 +22,7 @@ SESSION_BROWSER_BASE_CDP_PORT = 2242
 SESSION_BROWSER_CONNECT_TIMEOUT_SECONDS = 15.0
 SESSION_BROWSER_CONNECT_RETRY_ATTEMPTS = 4
 SESSION_BROWSER_CONNECT_RETRY_DELAY_SECONDS = 1
+SESSION_BROWSER_LAUNCH_RETRY_ATTEMPTS = 3
 _VOLATILE_CHROME_ENTRIES = {
     "ShaderCache",
     "GrShaderCache",
@@ -64,6 +66,22 @@ def _profile_dir(config: AppConfig, correlation_id: str) -> Path:
     profile_dir = runtime_root / "profiles" / _slug(correlation_id)
     profile_dir.parent.mkdir(parents=True, exist_ok=True)
     return profile_dir
+
+
+def _profile_dir_for_attempt(config: AppConfig, correlation_id: str, attempt: int) -> Path:
+    base = _profile_dir(config, correlation_id)
+    if attempt <= 1:
+        return base
+    retried = base.parent / f"{base.name}-retry-{attempt}"
+    retried.parent.mkdir(parents=True, exist_ok=True)
+    return retried
+
+
+def _find_open_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen(1)
+        return int(sock.getsockname()[1])
 
 
 def _seed_dir(config: AppConfig, correlation_id: str) -> Path:
@@ -182,6 +200,21 @@ def _is_transient_shared_browser_error(error: BaseException | str) -> bool:
     return any(marker in message for marker in transient_markers)
 
 
+def _is_launch_conflict_error(error: BaseException | str) -> bool:
+    message = str(error).lower()
+    markers = (
+        "timed out waiting for shared browser cdp endpoint",
+        "connection refused",
+        "address already in use",
+        "eaddrinuse",
+        "singletonlock",
+        "singletonsocket",
+        "singletoncookie",
+        "chrome failed to start",
+    )
+    return any(marker in message for marker in markers)
+
+
 async def _connect_shared_browser_page_with_retry(
     descriptor: dict[str, Any],
     apply_url: str,
@@ -225,46 +258,57 @@ async def launch_shared_browser(
 ) -> dict[str, Any]:
     config = AppConfig()
     launch_metadata, seeded_user_data_dir = _prepare_shared_browser_metadata(config, correlation_id, metadata)
-    port = _resolve_port(correlation_id, metadata)
-    endpoint = f"http://127.0.0.1:{port}"
-    profile_dir = "/Users/khoatruong0108/workspace/AutoRole/tmp" #_profile_dir(config, correlation_id)
     chrome_log_path = _log_path(correlation_id)
     apply_url = str(listing.get("apply_url") or listing.get("job_url") or "")
     platform = str(listing.get("platform") or "unknown")
+    preferred_port = _resolve_port(correlation_id, metadata)
 
-    with chrome_log_path.open("ab") as log_stream:
-        process = _launch_chrome(
-            profile_dir=profile_dir,
-            port=port,
-            metadata=launch_metadata,
-            log_stream=log_stream,
-        )
+    last_error: Exception | None = None
+    for attempt in range(1, SESSION_BROWSER_LAUNCH_RETRY_ATTEMPTS + 1):
+        port = preferred_port if attempt == 1 else _find_open_port()
+        endpoint = f"http://127.0.0.1:{port}"
+        profile_dir = _profile_dir_for_attempt(config, correlation_id, attempt)
 
-    descriptor = {
-        "kind": "shared_browser",
-        "status": "starting",
-        "endpoint": endpoint,
-        "port": port,
-        "pid": int(process.pid),
-        "profile_dir": str(profile_dir),
-        "chrome_log_path": str(chrome_log_path),
-        "platform": platform,
-        "apply_url": apply_url,
-        "authenticated": bool(authenticated),
-        "launched_at": _utcnow_iso(),
-    }
-    if seeded_user_data_dir is not None:
-        descriptor["seeded_user_data_dir"] = str(seeded_user_data_dir)
+        with chrome_log_path.open("ab") as log_stream:
+            process = _launch_chrome(
+                profile_dir=profile_dir,
+                port=port,
+                metadata=launch_metadata,
+                log_stream=log_stream,
+            )
 
-    try:
-        await _wait_for_cdp_ready(endpoint)
-        managed = await _connect_shared_browser_page_with_retry(descriptor, apply_url)
-        await close_managed_browser_page(managed)
-        descriptor["status"] = "ready"
-        return descriptor
-    except Exception:
-        _terminate_process_tree(int(process.pid))
-        raise
+        descriptor = {
+            "kind": "shared_browser",
+            "status": "starting",
+            "endpoint": endpoint,
+            "port": port,
+            "pid": int(process.pid),
+            "profile_dir": str(profile_dir),
+            "chrome_log_path": str(chrome_log_path),
+            "platform": platform,
+            "apply_url": apply_url,
+            "authenticated": bool(authenticated),
+            "launched_at": _utcnow_iso(),
+        }
+        if seeded_user_data_dir is not None:
+            descriptor["seeded_user_data_dir"] = str(seeded_user_data_dir)
+        if attempt > 1:
+            descriptor["launch_retry_attempt"] = attempt
+
+        try:
+            await _wait_for_cdp_ready(endpoint)
+            managed = await _connect_shared_browser_page_with_retry(descriptor, apply_url)
+            await close_managed_browser_page(managed)
+            descriptor["status"] = "ready"
+            return descriptor
+        except Exception as exc:
+            last_error = exc
+            _terminate_process_tree(int(process.pid))
+            if attempt < SESSION_BROWSER_LAUNCH_RETRY_ATTEMPTS and _is_launch_conflict_error(exc):
+                continue
+            raise
+
+    raise last_error or RuntimeError("Failed to launch shared browser")
 
 
 async def connect_shared_browser_page(shared_browser: dict[str, Any]) -> dict[str, Any]:

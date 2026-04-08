@@ -103,14 +103,7 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
         except Exception as exc:
             return StageResult.fail(f"Invalid form payload for submission: {exc}", "PreconditionError")
 
-        run_mode = str(metadata.get("run_mode", ""))
         apply_mode = str(metadata.get("apply_mode", "")).lower()
-        dryrun_skip_submit = True
-        # (
-        #     bool(metadata.get("dryrun_stop_after_submit", False))
-        #     or run_mode == "apply-dryrun"
-        #     or apply_mode == "dry_run"
-        # )
         force_loop = bool(metadata.get("force_form_loop", False))
         guardrail_block = bool(metadata.get("submit_disabled", False))
 
@@ -135,74 +128,68 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
         try:
             outcomes: list[FieldOutcome] = []
             screenshot_path = ""
-            action = "done" if dryrun_skip_submit else "submit"
+            action = "submit" 
             applied_payload: dict[str, Any] | None = None
+            if page is not None:
+                adapter = get_adapter(platform_id)
+                try:
+                    ready = await _ensure_submission_page_ready(
+                        page=page,
+                        adapter=adapter,
+                        apply_url=apply_url,
+                        detection=form_session.get("detection") if isinstance(form_session.get("detection"), dict) else {},
+                    )
+                    if not ready["success"]:
+                        return StageResult.fail(str(ready["error"]), str(ready.get("error_type") or "SubmissionError"))
 
-            if guardrail_block:
-                decision = "block"
-                reason = "submission disabled by operator guardrail"
-                status = "submit_disabled"
-                confirmed = False
-                loop_count = prior_loop_count
-                audit_path = self._write_audit_log(
-                    correlation_id=ctx.correlation_id,
-                    payload={
-                        "decision": decision,
-                        "reason": reason,
-                        "apply_mode": apply_mode,
-                        "timestamp": _utcnow_iso(),
-                    },
-                )
-            else:
-                if page is not None:
-                    adapter = get_adapter(platform_id)
-                    try:
-                        ready = await _ensure_submission_page_ready(
-                            page=page,
-                            adapter=adapter,
-                            apply_url=apply_url,
-                            detection=form_session.get("detection") if isinstance(form_session.get("detection"), dict) else {},
+                    outcomes = await self._executor.execute_page(page, fields, instructions, run_id=ctx.correlation_id)
+
+                    field_map = {field.id: field for field in fields}
+                    required_failures = [
+                        outcome
+                        for outcome in outcomes
+                        if outcome.status in {"fill_error", "selector_not_found"}
+                        and outcome.field_id in field_map
+                        and bool(field_map[outcome.field_id].required)
+                    ]
+
+                    file_input = await adapter.get_file_input(page)
+                    packaged_pdf_path = str(packaged.get("pdf_path") or "")
+                    if file_input is not None and packaged_pdf_path:
+                        await file_input.set_input_files(packaged_pdf_path)
+                        if hasattr(page, "wait_for_timeout"):
+                            await page.wait_for_timeout(500)
+
+                    artifacts_dir = Path("logs") / "form_submission" / ctx.correlation_id
+                    artifacts_dir.mkdir(parents=True, exist_ok=True)
+                    page_section_label = page_label.replace(" ", "_")[:40]
+                    screenshot_path = str(artifacts_dir / f"page_{page_index}_{page_section_label}.png")
+                    if hasattr(page, "screenshot"):
+                        await page.screenshot(path=screenshot_path)
+
+                    if required_failures:
+                        failed_ids = ", ".join(outcome.field_id for outcome in required_failures)
+                        return StageResult.fail(
+                            f"Required field(s) could not be filled; failing_field_ids=[{failed_ids}]",
+                            "RequiredFieldFillError",
                         )
-                        if not ready["success"]:
-                            return StageResult.fail(str(ready["error"]), str(ready.get("error_type") or "SubmissionError"))
 
-                        outcomes = await self._executor.execute_page(page, fields, instructions, run_id=ctx.correlation_id)
-
-                        field_map = {field.id: field for field in fields}
-                        required_failures = [
-                            outcome
-                            for outcome in outcomes
-                            if outcome.status in {"fill_error", "selector_not_found"}
-                            and outcome.field_id in field_map
-                            and bool(field_map[outcome.field_id].required)
-                        ]
-
-                        # # Temporary disable the file attaching to test submit button click;
-                        # file_input = await adapter.get_file_input(page)
-                        # packaged_pdf_path = str(packaged.get("pdf_path") or "")
-                        # if file_input is not None and packaged_pdf_path:
-                        #     await file_input.set_input_files(packaged_pdf_path)
-                        #     if hasattr(page, "wait_for_timeout"):
-                        #         await page.wait_for_timeout(500)
-
-                        artifacts_dir = Path("logs") / "form_submission" / ctx.correlation_id
-                        artifacts_dir.mkdir(parents=True, exist_ok=True)
-                        page_section_label = page_label.replace(" ", "_")[:40]
-                        screenshot_path = str(artifacts_dir / f"page_{page_index}_{page_section_label}.png")
-                        if hasattr(page, "screenshot"):
-                            await page.screenshot(path=screenshot_path)
-
-                        if required_failures:
-                            failed_ids = ", ".join(outcome.field_id for outcome in required_failures)
-                            return StageResult.fail(
-                                f"Required field(s) could not be filled; failing_field_ids=[{failed_ids}]",
-                                "RequiredFieldFillError",
-                            )
-
+                    if guardrail_block:
+                        action = "guardrail_block"
+                        audit_path = self._write_audit_log(
+                            correlation_id=ctx.correlation_id,
+                            payload={
+                                "action": action,
+                                "reason": "submission disabled by operator guardrail",
+                                "apply_mode": apply_mode,
+                                "platform_id": platform_id,
+                                "outcomes": [item.model_dump(mode="json") for item in outcomes],
+                                "timestamp": _utcnow_iso(),
+                            },
+                        )
+                    else:
                         if force_loop and prior_loop_count == 0:
                             action = "next_page"
-                        elif dryrun_skip_submit:
-                            action = "done"
                         else:
                             action = await adapter.advance(page)
 
@@ -276,41 +263,47 @@ class FormSubmissionExecutor(Executor[dict[str, Any]]):
                                     "timestamp": _utcnow_iso(),
                                 },
                             )
-                    except Exception as exc:
-                        if _is_target_closed_error(exc):
-                            return StageResult.fail(
-                                "Submission page was closed unexpectedly during form submission execution",
-                                "TargetClosedError",
-                            )
-                        raise
-                else:
-                    audit_path = self._write_audit_log(
-                        correlation_id=ctx.correlation_id,
-                        payload={
-                            "action": "done",
-                            "reason": "dry-run submission simulated (no browser page)",
-                            "timestamp": _utcnow_iso(),
-                        },
-                    )
+                except Exception as exc:
+                    if _is_target_closed_error(exc):
+                        return StageResult.fail(
+                            "Submission page was closed unexpectedly during form submission execution",
+                            "TargetClosedError",
+                        )
+                    raise
+            else:
+                audit_path = self._write_audit_log(
+                    correlation_id=ctx.correlation_id,
+                    payload={
+                        "action": "done",
+                        "reason": "dry-run submission simulated (no browser page)",
+                        "timestamp": _utcnow_iso(),
+                    },
+                )
 
-                if action == "submit":
-                    decision = "pass"
-                    reason = "submission completed"
-                    status = "submitted"
-                    confirmed = True
-                    loop_count = prior_loop_count
-                elif action == "next_page":
-                    decision = "loop"
-                    reason = "additional scrape cycle requested"
-                    status = "rescrape_required"
-                    confirmed = False
-                    loop_count = prior_loop_count + 1
-                else:
-                    decision = "pass"
-                    reason = "dry-run submission simulated"
-                    status = "dry_run"
-                    confirmed = False
-                    loop_count = prior_loop_count
+            if guardrail_block:
+                decision = "block"
+                reason = "submission disabled by operator guardrail"
+                status = "submit_disabled"
+                confirmed = False
+                loop_count = prior_loop_count
+            elif action == "submit":
+                decision = "pass"
+                reason = "submission completed"
+                status = "submitted"
+                confirmed = True
+                loop_count = prior_loop_count
+            elif action == "next_page":
+                decision = "loop"
+                reason = "additional scrape cycle requested"
+                status = "rescrape_required"
+                confirmed = False
+                loop_count = prior_loop_count + 1
+            else:
+                decision = "pass"
+                reason = "dry-run submission simulated"
+                status = "dry_run"
+                confirmed = False
+                loop_count = prior_loop_count
 
             all_outcomes_session = form_session.get("all_outcomes") if isinstance(form_session.get("all_outcomes"), list) else []
             all_outcomes_session.extend([outcome.model_dump(mode="json") for outcome in outcomes])

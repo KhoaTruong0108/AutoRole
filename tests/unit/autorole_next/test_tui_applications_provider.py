@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 
 import pytest
 
@@ -118,3 +119,149 @@ async def test_applications_provider_exports_pipeline_context_payload(tmp_path) 
     assert exported["message_payload"]["current_stage"] == FORM_SUBMISSION
     assert exported["message_payload"]["data"]["listing"]["job_url"] == seed.listing.job_url
     assert exported["message_payload"]["metadata"]["run_mode"] == "apply"
+
+
+@pytest.mark.asyncio
+async def test_applications_provider_detects_pending_form_submission_dlq(tmp_path) -> None:
+    store = AutoRoleStoreAdapter(str(tmp_path / "autorole-next.db"))
+    seed = _seed()
+    correlation_id = correlation_id_for_listing(seed.listing)
+    canonical_key = canonical_listing_key(seed.listing)
+
+    created, _ = await store.claim_listing_seed(correlation_id, seed)
+    assert created is True
+
+    payload = SeedRunPayload(
+        listing=seed.listing,
+        source_name=seed.source_name,
+        source_metadata=seed.source_metadata,
+        discovered_at=seed.discovered_at,
+        canonical_key=canonical_key,
+    )
+    context = StateContext[dict[str, object]](
+        correlation_id=correlation_id,
+        current_stage=FORM_SUBMISSION,
+        data=payload.model_dump(mode="json"),
+        metadata={"submit_disabled": True},
+    )
+    await store.save_context(context)
+    await store.create_run(correlation_id, {})
+    await store.set_run_status(correlation_id, RunStatus.BLOCKED, reason="manual approval required")
+
+    with sqlite3.connect(store.path) as db:
+        db.execute(
+            """
+            INSERT INTO dlq_messages (
+                id,
+                queue_name,
+                correlation_id,
+                stage_name,
+                attempt,
+                error_category,
+                error_message,
+                context_snapshot,
+                created_at,
+                redriven_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "dlq-1",
+                "global_dlq",
+                correlation_id,
+                FORM_SUBMISSION,
+                0,
+                "business_rule",
+                "submission disabled by operator guardrail",
+                json.dumps(context.model_dump(mode="json")),
+                datetime.now(timezone.utc).isoformat(),
+                None,
+            ),
+        )
+        db.commit()
+
+    provider = SQLiteApplicationsProvider(store.path)
+    assert await provider.has_pending_form_submission_dlq(correlation_id) is True
+
+
+@pytest.mark.asyncio
+async def test_applications_provider_manual_submit_redrives_to_concluding(tmp_path) -> None:
+    store = AutoRoleStoreAdapter(str(tmp_path / "autorole-next.db"))
+    seed = _seed()
+    correlation_id = correlation_id_for_listing(seed.listing)
+    canonical_key = canonical_listing_key(seed.listing)
+
+    created, _ = await store.claim_listing_seed(correlation_id, seed)
+    assert created is True
+
+    payload = SeedRunPayload(
+        listing=seed.listing,
+        source_name=seed.source_name,
+        source_metadata=seed.source_metadata,
+        discovered_at=seed.discovered_at,
+        canonical_key=canonical_key,
+    )
+    context = StateContext[dict[str, object]](
+        correlation_id=correlation_id,
+        current_stage=FORM_SUBMISSION,
+        data=payload.model_dump(mode="json"),
+        metadata={"submit_disabled": True},
+    )
+    await store.save_context(context)
+    await store.create_run(correlation_id, {})
+    await store.set_run_status(correlation_id, RunStatus.BLOCKED, reason="manual approval required")
+
+    with sqlite3.connect(store.path) as db:
+        db.execute(
+            """
+            INSERT INTO dlq_messages (
+                id,
+                queue_name,
+                correlation_id,
+                stage_name,
+                attempt,
+                error_category,
+                error_message,
+                context_snapshot,
+                created_at,
+                redriven_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "dlq-2",
+                "global_dlq",
+                correlation_id,
+                FORM_SUBMISSION,
+                0,
+                "business_rule",
+                "submission disabled by operator guardrail",
+                json.dumps(context.model_dump(mode="json")),
+                datetime.now(timezone.utc).isoformat(),
+                None,
+            ),
+        )
+        db.commit()
+
+    provider = SQLiteApplicationsProvider(store.path)
+    success, message = await provider.manual_submit_to_concluding(correlation_id)
+
+    assert success is True
+    assert "concluding" in message.lower()
+    assert await provider.has_pending_form_submission_dlq(correlation_id) is False
+
+    with sqlite3.connect(store.path) as db:
+        queue_row = db.execute(
+            "SELECT queue_name, correlation_id FROM queue_messages ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+        assert queue_row == ("concluding", correlation_id)
+
+        context_row = db.execute(
+            "SELECT current_stage FROM pipeline_contexts WHERE correlation_id = ?",
+            (correlation_id,),
+        ).fetchone()
+        assert context_row == ("concluding",)
+
+        run_row = db.execute(
+            "SELECT status FROM pipeline_runs WHERE correlation_id = ?",
+            (correlation_id,),
+        ).fetchone()
+        assert run_row == ("running",)

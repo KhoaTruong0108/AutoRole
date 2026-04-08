@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import time
+from uuid import uuid4
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,6 +119,96 @@ class SQLiteApplicationsProvider:
         export_payload = self._build_export_payload(details)
         export_path.write_text(json.dumps(export_payload, indent=2) + "\n", encoding="utf-8")
         return export_path
+
+    async def has_pending_form_submission_dlq(self, correlation_id: str) -> bool:
+        async with aiosqlite.connect(self._db_path) as conn:
+            cursor = await conn.execute(
+                """
+                SELECT 1
+                FROM dlq_messages
+                WHERE correlation_id = ?
+                  AND stage_name IN ('formSubmission', 'form_submission')
+                  AND redriven_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (correlation_id,),
+            )
+            return (await cursor.fetchone()) is not None
+
+    async def manual_submit_to_concluding(self, correlation_id: str) -> tuple[bool, str]:
+        now_unix = time.time()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        async with aiosqlite.connect(self._db_path) as conn:
+            await conn.execute("BEGIN IMMEDIATE")
+            try:
+                dlq_cursor = await conn.execute(
+                    """
+                    SELECT id
+                    FROM dlq_messages
+                    WHERE correlation_id = ?
+                      AND stage_name IN ('formSubmission', 'form_submission')
+                      AND redriven_at IS NULL
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    (correlation_id,),
+                )
+                dlq_row = await dlq_cursor.fetchone()
+                if dlq_row is None:
+                    await conn.rollback()
+                    return False, "No pending form submission DLQ entry found for this run"
+
+                await conn.execute(
+                    """
+                    INSERT INTO queue_messages (
+                        id,
+                        queue_name,
+                        correlation_id,
+                        visible_at,
+                        locked_until,
+                        delivery_count,
+                        created_at
+                    ) VALUES (?, ?, ?, ?, NULL, 0, ?)
+                    """,
+                    (
+                        str(uuid4()),
+                        "concluding",
+                        correlation_id,
+                        now_unix,
+                        now_unix,
+                    ),
+                )
+
+                await conn.execute(
+                    """
+                    UPDATE pipeline_contexts
+                    SET current_stage = ?, updated_at = ?
+                    WHERE correlation_id = ?
+                    """,
+                    ("concluding", now_iso, correlation_id),
+                )
+
+                await conn.execute(
+                    """
+                    UPDATE pipeline_runs
+                    SET status = ?, reason = ?, updated_at = ?
+                    WHERE correlation_id = ?
+                    """,
+                    ("running", "manual submit approved via TUI", now_iso, correlation_id),
+                )
+
+                await conn.execute(
+                    "DELETE FROM dlq_messages WHERE id = ? AND redriven_at IS NULL",
+                    (str(dlq_row[0]),),
+                )
+
+                await conn.commit()
+                return True, "Redriven to concluding"
+            except Exception as exc:
+                await conn.rollback()
+                return False, f"Manual submit redrive failed: {exc}"
 
     @staticmethod
     def _decode_json(payload: str, *, fallback_key: str) -> Any:

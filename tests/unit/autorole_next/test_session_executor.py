@@ -94,3 +94,66 @@ def test_session_executor_emits_shared_browser_descriptor(monkeypatch) -> None:
     assert len(store.calls) == 1
     assert store.calls[0]["platform"] == "workday"
     assert store.calls[0]["authenticated"] is False
+
+
+def test_session_executor_fails_when_shared_browser_launch_errors(monkeypatch) -> None:
+    async def _fake_launch_shared_browser(**_: object) -> dict[str, object]:
+        raise RuntimeError("cdp endpoint timeout")
+
+    monkeypatch.setattr("autorole_next.executors.session.launch_shared_browser", _fake_launch_shared_browser)
+
+    store = _FakeStore(calls=[])
+    SessionExecutor.configure_store(store)  # type: ignore[arg-type]
+    executor = SessionExecutor()
+
+    result = asyncio.run(
+        executor.execute(
+            _ctx(
+                {
+                    "listing": {
+                        "platform": "greenhouse",
+                        "apply_url": "https://job-boards.greenhouse.io/company/jobs/1",
+                    }
+                }
+            )
+        )
+    )
+
+    assert result.success is False
+    assert result.error_type == "SessionPreconditionError"
+    assert "shared browser" in str(result.error).lower()
+    assert store.calls == []
+
+
+def test_session_executor_fails_when_shared_browser_not_ready(monkeypatch) -> None:
+    async def _fake_launch_shared_browser(**_: object) -> dict[str, object]:
+        return {
+            "kind": "shared_browser",
+            "status": "starting",
+            "endpoint": "http://127.0.0.1:2242",
+            "port": 2242,
+        }
+
+    monkeypatch.setattr("autorole_next.executors.session.launch_shared_browser", _fake_launch_shared_browser)
+
+    store = _FakeStore(calls=[])
+    SessionExecutor.configure_store(store)  # type: ignore[arg-type]
+    executor = SessionExecutor()
+
+    result = asyncio.run(
+        executor.execute(
+            _ctx(
+                {
+                    "listing": {
+                        "platform": "greenhouse",
+                        "apply_url": "https://job-boards.greenhouse.io/company/jobs/1",
+                    }
+                }
+            )
+        )
+    )
+
+    assert result.success is False
+    assert result.error_type == "SessionPreconditionError"
+    assert "ready shared browser" in str(result.error).lower()
+    assert store.calls == []
